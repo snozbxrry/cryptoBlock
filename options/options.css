@@ -1,0 +1,54 @@
+body {
+	font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+	margin: 0;
+	background: #0f1419;
+	color: #e6e9ec;
+}
+.container {
+	max-width: 1000px;
+	margin: 40px auto;
+	padding: 0 16px 48px;
+}
+
+.toolbar {
+	position: sticky;
+	top: 0;
+	z-index: 5;
+	background: linear-gradient(180deg, rgba(15,20,25,0.97) 0%, rgba(15,20,25,0.92) 100%);
+	backdrop-filter: blur(6px);
+	border-bottom: 1px solid #232a34;
+	margin: 0 -16px 16px;
+	padding: 10px 16px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+.toolbar .title { font-size: 26px; margin: 0; }
+.toolbar .actions { margin-left: auto; display: flex; gap: 8px; }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 24px; margin-bottom: 24px; }
+@media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+.card { background: #11161d; border: 1px solid #232a34; border-radius: 12px; padding: 18px; box-shadow: 0 4px 18px rgba(0,0,0,0.25); }
+.card h2 { font-size: 18px; margin: 0 0 12px; }
+
+label { display: block; margin: 8px 0 6px; font-weight: 600; }
+
+textarea { width: 100%; box-sizing: border-box; background: #0b0f14; color: #e6e9ec; border: 1px solid #2d333b; border-radius: 8px; padding: 10px; resize: vertical; line-height: 1.4; min-height: 280px; height: 140px; max-height: 60vh; }
+
+* { scrollbar-width: thin; scrollbar-color: #3a4450 #0b0f14; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: #0b0f14; border-radius: 8px; }
+*::-webkit-scrollbar-thumb { background: #3a4450; border-radius: 8px; border: 2px solid #0b0f14; }
+*::-webkit-scrollbar-thumb:hover { background: #556275; }
+
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+button, .import-label span { background: #1d9bf0; border: none; color: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+button#reset, #clearLearned { background: #6b7280; }
+.import-label input { display: none; }
+
+.hint { font-size: 12px; color: #9aa6b2; margin-top: 8px; }
+.learned-list { margin-top: 12px; }
+.learned-list summary { cursor: pointer; color: #9ecbff; }
+.learned-list ul { list-style: none; padding: 8px 0 0; margin: 0; max-height: 220px; overflow: auto; border-top: 1px solid #232a34; }
+.learned-list li { padding: 6px 0; border-bottom: 1px solid #18202a; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }

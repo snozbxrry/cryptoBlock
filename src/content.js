@@ -1,0 +1,148 @@
+(function() {
+	const DEFAULT_KEYWORDS = [
+		"crypto","bitcoin","ethereum","eth","btc","solana","sol","airdrop","nft","web3","altcoin","memecoin","shitcoin","token","ico","ido","seed","airdrops","uniswap","defi","dex","metamask","binance","coinbase","bybit","okx","bitfinex","blockchain"
+	];
+
+	let keywordList = [];
+	let blockedHandles = [];
+	let exceptions = [];
+	let autoBlockedSet = new Set();
+	let bundledSet = new Set();
+	let persistTimer = null;
+	const sessionAllowlist = new Set();
+	let isPaused = false;
+	let lastScanTime = 0;
+	const SCAN_THROTTLE_MS = 1000; 
+
+	function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+	function buildRegexFromKeywords(keywords) { const parts = keywords.map(k => k.trim()).filter(k => k.length > 0).map(escapeRegex); if (parts.length === 0) return null; return new RegExp(`\\b(?:${parts.join("|")})\\b`, "i"); }
+	function normalizeHandle(handle) { if (!handle) return ""; let h = handle.trim(); if (!h.startsWith("@")) h = "@" + h; return h.toLowerCase(); }
+	function extractHandleFromHref(href) { try { if (!href) return ""; const clean = href.split('?')[0].split('#')[0]; const seg = clean.split('/').filter(Boolean)[0] || ''; if (!seg) return ""; if (["i","explore","settings","home","notifications"].includes(seg)) return ""; return '@' + seg; } catch (_) { return ""; } }
+	function extractHandleFromUrl() { try { return extractHandleFromHref(location.pathname); } catch (_) { return ""; } }
+	function schedulePersistAutoBlocklist() { if (persistTimer) clearTimeout(persistTimer); persistTimer = setTimeout(() => { try { chrome.storage.local.set({ autoBlockedHandles: Array.from(autoBlockedSet) }); } catch (_) {} }, 500); }
+	function addToAutoBlocklist(handle) { const h = normalizeHandle(handle); if (!h) return; if (bundledSet.has(h)) return; if (!autoBlockedSet.has(h)) { autoBlockedSet.add(h); schedulePersistAutoBlocklist(); } }
+
+	function isExcepted(handle) { const h = normalizeHandle(handle); if (!h) return false; if (sessionAllowlist.has(h)) return true; return exceptions.includes(h); }
+
+	function addToExceptionsPersistent(handle) {
+		const h = normalizeHandle(handle);
+		if (!h) return;
+		if (exceptions.includes(h)) return;
+		exceptions = [...exceptions, h];
+		chrome.storage.local.set({ exceptions });
+	}
+
+	function removeFromExceptionsPersistent(handle) {
+		const h = normalizeHandle(handle);
+		if (!h) return;
+		exceptions = exceptions.filter(x => x !== h);
+		chrome.storage.local.set({ exceptions });
+	}
+
+	function shouldHideTextAndHandle(textContent, authorHandle, learn = false) { const text = (textContent || "").toLowerCase(); const handleNorm = normalizeHandle(authorHandle); if (isExcepted(handleNorm)) return false; if (handleNorm && autoBlockedSet.has(handleNorm)) return true; if (handleNorm && blockedHandles.includes(handleNorm)) return true; const regex = buildRegexFromKeywords(keywordList); if (!regex) return false; const matched = regex.test(text) || (handleNorm && regex.test(handleNorm)); if (matched && learn && handleNorm) addToAutoBlocklist(handleNorm); return matched; }
+	function getBlockReason(textContent, authorHandle) { const text = (textContent || "").toLowerCase(); const handleNorm = normalizeHandle(authorHandle); if (isExcepted(handleNorm)) return null; if (handleNorm && autoBlockedSet.has(handleNorm)) return `Learned handle: ${handleNorm}`; if (handleNorm && blockedHandles.includes(handleNorm)) return `Manually blocked: ${handleNorm}`; const regex = buildRegexFromKeywords(keywordList); if (!regex) return null; const matched = regex.test(text) || (handleNorm && regex.test(handleNorm)); if (matched) { const matchedKeywords = keywordList.filter(k => { const keywordRegex = new RegExp(`\\b${escapeRegex(k)}\\b`, 'i'); return keywordRegex.test(text) || (handleNorm && keywordRegex.test(handleNorm)); }); return `Keywords: ${matchedKeywords.slice(0, 3).join(', ')}${matchedKeywords.length > 3 ? '...' : ''}`; } return null; }
+	function findAuthorHandle(tweetEl) { const withAt = tweetEl.querySelector('a[role="link"] span'); if (withAt && withAt.textContent && withAt.textContent.includes('@')) return withAt.textContent.trim(); const profileLink = tweetEl.querySelector('a[role="link"][href^="/" i]:not([href*="status"])'); if (profileLink) { const candidate = extractHandleFromHref(profileLink.getAttribute('href')); if (candidate) return candidate; } const possible = tweetEl.querySelectorAll('span'); for (const span of possible) { const t = span.textContent || ""; if (t.startsWith('@') && t.length > 1 && !t.includes(' ')) return t.trim(); } return ""; }
+	function extractTweetText(tweetEl) { let chunks = []; for (const n of tweetEl.querySelectorAll('[data-testid="tweetText"]')) if (n && n.textContent) chunks.push(n.textContent); for (const n of tweetEl.querySelectorAll('div[lang], div[dir]')) if (n && n.textContent) chunks.push(n.textContent); for (const n of tweetEl.querySelectorAll('article [data-testid="tweetText"], article div[lang]')) if (n && n.textContent) chunks.push(n.textContent); if (chunks.length === 0 && tweetEl.textContent) chunks.push(tweetEl.textContent); return chunks.join(' ').replace(/\s+/g,' ').trim(); }
+	function hideElement(el) { const cell = el.closest('[data-testid="cellInnerDiv"]') || el.closest('[data-testid="UserCell"]') || el; cell.style.display = 'none'; }
+	function processTweet(tweetEl) { try { if (isPaused) return; const text = extractTweetText(tweetEl); const handle = findAuthorHandle(tweetEl); if (shouldHideTextAndHandle(text, handle, true)) hideElement(tweetEl); } catch (_) {} }
+	function scanExistingTweets() { if (isPaused) return; const now = Date.now(); if (now - lastScanTime < SCAN_THROTTLE_MS) return; lastScanTime = now; const tweets = document.querySelectorAll('article[role="article"]'); for (const t of tweets) processTweet(t); }
+
+	function collectProfileText() { const nameEl = document.querySelector('div[data-testid="UserName"] span'); const bioEl = document.querySelector('div[data-testid="UserDescription"]'); const handleEl = document.querySelector('div[data-testid="UserName"] a[href^="/" i] span'); const name = nameEl ? nameEl.textContent || '' : ''; const bio = bioEl ? bioEl.textContent || '' : ''; let handle = handleEl ? handleEl.textContent || '' : ''; if (!handle) handle = extractHandleFromUrl(); return { text: (name + ' ' + bio).trim(), handle }; }
+	function injectFloatingReblock(container, handle) { let btn = container.querySelector('.cryptoBlock-reblock-btn'); if (!btn) { btn = document.createElement('button'); btn.className = 'cryptoBlock-reblock-btn'; btn.textContent = 'Block again'; btn.style.position = 'absolute'; btn.style.top = '8px'; btn.style.right = '8px'; btn.style.zIndex = '10000'; btn.style.background = '#ef4444'; btn.style.border = 'none'; btn.style.color = '#fff'; btn.style.padding = '6px 10px'; btn.style.borderRadius = '6px'; btn.style.cursor = 'pointer'; container.style.position = container.style.position || 'relative'; container.appendChild(btn); } btn.onclick = () => { const h = normalizeHandle(handle || extractHandleFromUrl()); if (h) { sessionAllowlist.delete(h); removeFromExceptionsPersistent(h); } applyProfilePageBlocking(); }; btn.style.display = 'block'; }
+	function hideFloatingReblock(container) { const btn = container.querySelector('.cryptoBlock-reblock-btn'); if (btn) btn.style.display = 'none'; }
+	function ensureProfileCover(container, handle, blockReason = null) { let cover = container.querySelector('.cryptoBlock-profile-cover'); if (!cover) { cover = document.createElement('div'); cover.className = 'cryptoBlock-profile-cover'; cover.style.position = 'absolute'; cover.style.inset = '0'; cover.style.background = '#000'; cover.style.color = '#fff'; cover.style.display = 'flex'; cover.style.flexDirection = 'column'; cover.style.alignItems = 'center'; cover.style.justifyContent = 'center'; cover.style.gap = '12px'; cover.style.fontSize = '16px'; cover.style.zIndex = '9999'; const msg = document.createElement('div'); msg.textContent = 'Profile hidden by cryptoBlock'; const reasonEl = document.createElement('div'); reasonEl.className = 'cryptoBlock-reason'; reasonEl.style.fontSize = '14px'; reasonEl.style.color = '#ccc'; reasonEl.style.textAlign = 'center'; reasonEl.style.maxWidth = '300px'; reasonEl.style.lineHeight = '1.4'; const btn = document.createElement('button'); btn.textContent = 'Show profile'; btn.style.background = '#1d9bf0'; btn.style.border = 'none'; btn.style.color = '#fff'; btn.style.padding = '8px 14px'; btn.style.borderRadius = '6px'; btn.style.cursor = 'pointer'; btn.addEventListener('click', () => { const hUrl = extractHandleFromUrl(); const hText = normalizeHandle(handle); const chosen = normalizeHandle(hText || hUrl); if (chosen) { sessionAllowlist.add(chosen); addToExceptionsPersistent(chosen); } cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"], [data-testid="primaryColumn"] section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; injectFloatingReblock(container, chosen); }); cover.appendChild(msg); cover.appendChild(reasonEl); cover.appendChild(btn); container.style.position = container.style.position || 'relative'; container.appendChild(cover); } const reasonEl = cover.querySelector('.cryptoBlock-reason'); if (reasonEl) { reasonEl.textContent = blockReason || ''; reasonEl.style.display = blockReason ? 'block' : 'none'; } return cover; }
+	function applyProfilePageBlocking() { try { const main = document.querySelector('main[role="main"]'); if (!main) return; let container = main.querySelector('div[data-testid="primaryColumn"]') || main; const { text, handle } = collectProfileText(); const handleNorm = normalizeHandle(handle || extractHandleFromUrl());
+		if (isPaused) { const cover = ensureProfileCover(container, handleNorm); if (cover) cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; hideFloatingReblock(container); return; }
+		if (handleNorm && sessionAllowlist.has(handleNorm)) { const cover = ensureProfileCover(container, handleNorm); if (cover) cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; injectFloatingReblock(container, handleNorm); return; }
+		const hide = shouldHideTextAndHandle(text, handleNorm, true);
+		if (hide) { const blockReason = getBlockReason(text, handleNorm); const cover = ensureProfileCover(container, handleNorm, blockReason); const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = 'none'; if (cover) cover.style.display = 'flex'; hideFloatingReblock(container); container.style.minHeight = '100vh'; } else { const cover = ensureProfileCover(container, handleNorm); if (cover) cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; hideFloatingReblock(container); }
+	} catch (_) {} }
+
+	function isOnSearchPage() { return location.pathname.startsWith('/search'); }
+	function isOnPeopleSearchPage() { if (!isOnSearchPage()) return false; try { const params = new URLSearchParams(location.search); const f = (params.get('f') || '').toLowerCase(); return f === 'user' || f === 'users' || f === 'people'; } catch (_) { return false; } }
+	function scanSearchPeopleCells() { if (isPaused) return; const now = Date.now(); if (now - lastScanTime < SCAN_THROTTLE_MS) return; lastScanTime = now; const timeline = document.querySelector('[aria-label^="Timeline:"]'); const cells = (timeline || document).querySelectorAll('[data-testid="UserCell"], [data-testid="cellInnerDiv"]'); for (const cell of cells) processUserCell(cell); }
+	function scanSearchTweets() { if (isPaused) return; const now = Date.now(); if (now - lastScanTime < SCAN_THROTTLE_MS) return; lastScanTime = now; const timeline = document.querySelector('[aria-label^="Timeline:"]'); const arts = (timeline || document).querySelectorAll('[data-testid="cellInnerDiv"] article, article[role="article"]'); for (const a of arts) processTweet(a); }
+
+	function observeTimeline() {
+		const root = document.body;
+		const observer = new MutationObserver((mutations) => {
+			for (const mutation of mutations) {
+				for (const node of mutation.addedNodes) {
+					if (!(node instanceof HTMLElement)) continue;
+					if (isPaused) continue;
+					if (node.matches && node.matches('article[role="article"]')) {
+						processTweet(node);
+					} else if (node.matches && node.matches('[data-testid="cellInnerDiv"]')) {
+						const arts = node.querySelectorAll('article');
+						for (const a of arts) processTweet(a);
+						const cells = node.querySelectorAll('[data-testid="UserCell"], [data-testid="TypeaheadUser"], [data-testid="UserCell-Enhanced"]');
+						for (const c of cells) processUserCell(c);
+					} else if (node.matches && (node.matches('[data-testid="UserCell"]') || node.matches('[data-testid="TypeaheadUser"]'))) {
+						processUserCell(node);
+					} else {
+						const nestedTweets = node.querySelectorAll ? node.querySelectorAll('article[role=\"article\"]') : [];
+						for (const t of nestedTweets) processTweet(t);
+						const nestedCells = node.querySelectorAll ? node.querySelectorAll('[data-testid=\"UserCell\"], [data-testid=\"TypeaheadUser\"], [data-testid=\"UserCell-Enhanced\"], [data-testid=\"cellInnerDiv\"]') : [];
+						for (const c of nestedCells) { if (c.matches && c.matches('article')) processTweet(c); else processUserCell(c); }
+					}
+				}
+			}
+		});
+		observer.observe(root, { childList: true, subtree: true });
+		setInterval(() => {
+			if (isPaused) return;
+			if (isOnPeopleSearchPage()) {
+				scanSearchPeopleCells();
+			} else if (isOnSearchPage()) {
+				scanSearchTweets();
+			}
+		}, 2000);
+	}
+
+	function extractUserCellInfo(userCell) { let handle = ''; let text = ''; const userNameGroup = userCell.querySelector('[data-testid="User-Name"]'); if (userNameGroup) { const spans = userNameGroup.querySelectorAll('span'); for (const s of spans) { const t = (s.textContent || '').trim(); if (t.startsWith('@') && t.length > 1 && !t.includes(' ')) { handle = t; break; } } } if (!handle) { const profileLink = userCell.querySelector('a[href^="/" i][role="link"]'); if (profileLink) handle = extractHandleFromHref(profileLink.getAttribute('href')); } const bio = userCell.querySelector('[data-testid="UserDescription"], div[dir]'); const nameNode = userCell.querySelector('[data-testid="User-Name"]'); text = [nameNode ? nameNode.textContent : '', bio ? bio.textContent : ''].join(' ').trim(); if (!text) text = (userCell.textContent || '').trim(); return { handle, text }; }
+	function processUserCell(el) { try { if (isPaused) return; const info = extractUserCellInfo(el); if (shouldHideTextAndHandle(info.text, info.handle, true)) hideElement(el); } catch (_) {} }
+	function scanExistingUserCells() { const cells = document.querySelectorAll('[data-testid="UserCell"], [data-testid="TypeaheadUser"], [data-testid="UserCell-Enhanced"], [data-testid="cellInnerDiv"]'); for (const c of cells) processUserCell(c); }
+
+	async function mergeBundledBlocklist() {
+		try {
+			const url = chrome.runtime.getURL('blocklist/blocklist.json');
+			const res = await fetch(url);
+			if (!res.ok) return;
+			const arr = await res.json();
+			if (Array.isArray(arr)) {
+				bundledSet = new Set(arr.map(normalizeHandle).filter(Boolean));
+				for (const h of bundledSet) {
+					if (autoBlockedSet.has(h)) autoBlockedSet.delete(h);
+				}
+			}
+		} catch (_) {}
+	}
+
+	function loadSettingsAndStart() {
+		chrome.storage.local.get({ autoBlockedHandles: [], keywords: DEFAULT_KEYWORDS, blockedHandles: [], exceptions: [], paused: false }, async (local) => {
+			autoBlockedSet = new Set((local.autoBlockedHandles || []).map(normalizeHandle));
+			isPaused = Boolean(local.paused);
+			await mergeBundledBlocklist();
+			chrome.storage.sync.get({ keywords: local.keywords, blockedHandles: local.blockedHandles, exceptions: local.exceptions }, (syncVals) => {
+				keywordList = Array.isArray(local.keywords) ? local.keywords : (Array.isArray(syncVals.keywords) ? syncVals.keywords : DEFAULT_KEYWORDS);
+				blockedHandles = (Array.isArray(local.blockedHandles) ? local.blockedHandles : (Array.isArray(syncVals.blockedHandles) ? syncVals.blockedHandles : [])).map(normalizeHandle);
+				exceptions = (Array.isArray(local.exceptions) ? local.exceptions : (Array.isArray(syncVals.exceptions) ? syncVals.exceptions : [])).map(normalizeHandle);
+				scanExistingTweets();
+				scanExistingUserCells();
+				if (isOnSearchPage()) { scanSearchTweets(); }
+				if (isOnPeopleSearchPage()) scanSearchPeopleCells();
+				observeTimeline();
+				applyProfilePageBlocking();
+				setInterval(applyProfilePageBlocking, 3000);
+			});
+		});
+		chrome.storage.onChanged.addListener((changes, area) => {
+			if (area === 'local' && Object.prototype.hasOwnProperty.call(changes, 'paused')) {
+				isPaused = Boolean(changes.paused.newValue);
+				applyProfilePageBlocking();
+			}
+		});
+	}
+	document.addEventListener('DOMContentLoaded', loadSettingsAndStart);
+	if (document.readyState === 'interactive' || document.readyState === 'complete') { loadSettingsAndStart(); }
+})();

@@ -1,0 +1,13 @@
+body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #e6e9ec; background: #0f1419; }
+* { box-sizing: border-box; }
+.wrap { width: 260px; padding: 10px; }
+header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+header h1 { font-size: 14px; margin: 0; }
+.version { margin-left: auto; color: #9aa6b2; }
+.row { display: flex; align-items: center; justify-content: space-between; margin: 6px 0; }
+.row.small { margin-top: 2px; }
+.label { color: #9aa6b2; }
+.value { font-weight: 600; }
+button { background: #1d9bf0; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+.row button { width: 100%; }
+footer { margin-top: 0; }

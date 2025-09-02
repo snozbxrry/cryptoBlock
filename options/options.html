@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>cryptoBlock Options</title>
+		<link rel="stylesheet" href="options.css" />
+	</head>
+	<body>
+		<div class="container">
+			<div class="toolbar">
+				<h1 class="title">cryptoBlock Options</h1>
+				<div class="actions">
+					<button id="save">Save changes</button>
+					<button id="reset">Reset to defaults</button>
+				</div>
+			</div>
+
+			<div class="grid">
+				<section class="card">
+					<h2>Content filters</h2>
+					<label for="keywords">Keywords (one per line)</label>
+					<textarea id="keywords" rows="12" placeholder="e.g. bitcoin"></textarea>
+				</section>
+
+				<section class="card">
+					<h2>Manual blocklist</h2>
+					<label for="handles">Blocked @handles (one per line)</label>
+					<textarea id="handles" rows="12" placeholder="e.g. @binance"></textarea>
+					<p class="hint">This is in addition to the built-in and learned lists.</p>
+				</section>
+			</div>
+
+			<div class="grid">
+				<section class="card">
+					<h2>Learned blocklist</h2>
+					<p><strong id="learnedCount">0</strong> handles learned on this device.</p>
+					<div class="actions">
+						<button id="exportLearned">Export JSON</button>
+						<label class="import-label">
+							<input id="importFile" type="file" accept="application/json" />
+							<span>Import JSON</span>
+						</label>
+						<button id="clearLearned">Clear learned</button>
+					</div>
+					<details class="learned-list">
+						<summary>Show learned handles</summary>
+						<ul id="learnedList"></ul>
+					</details>
+				</section>
+
+				<section class="card">
+					<h2>Exceptions</h2>
+					<label for="exceptions">Always allow these @handles (one per line)</label>
+					<textarea id="exceptions" rows="10" placeholder="e.g. @elonmusk"></textarea>
+					<p class="hint">Profiles and posts from these handles will never be hidden.</p>
+				</section>
+			</div>
+		</div>
+		<script src="options.js"></script>
+	</body>
+</html>
