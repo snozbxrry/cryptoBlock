@@ -28,7 +28,7 @@ A powerful Chrome extension that automatically hides tweets, profiles, and conte
 3. Confirm the installation
 
 ### Privacy & Security
-- **Privacy Policy**: [View our privacy policy](PRIVACY_POLICY.md)
+- **Privacy Policy**: [View our privacy policy](https://raw.githubusercontent.com/snozbxrry/cryptoBlock/main/PRIVACY_POLICY.md)
 - **No Data Collection**: We don't collect, store, or transmit any personal information
 - **Client-Side Only**: All processing happens locally in your browser
 - **Open Source**: Full source code available for transparency
