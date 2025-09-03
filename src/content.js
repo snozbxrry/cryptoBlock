@@ -14,7 +14,7 @@
 	}
 
 	const OLD_DEFAULT_KEYWORDS = [
-		"crypto","bitcoin","ethereum","eth","btc","solana","sol","airdrop","nft","web3","altcoin","memecoin","shitcoin","token","ico","ido","seed round","binance","coinbase","pump","moon","ponzi","staking","airdrops","uniswap","defi"
+		"crypto","bitcoin","ethereum","eth","btc","solana","sol","airdrop","nft","web3","altcoin","memecoin","shitcoin","token","seed round","binance","coinbase","pumpfun","staking","airdrops","uniswap","defi"
 	];
 
 	function arraysEqual(a, b) {
