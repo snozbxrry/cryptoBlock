@@ -1,6 +1,6 @@
 (function() {
 	const DEFAULT_KEYWORDS = [
-		"crypto","bitcoin","ethereum","eth","btc","solana","sol","airdrop","nft","web3","altcoin","memecoin","shitcoin","token","ico","ido","seed round","binance","coinbase","pump","moon","ponzi","staking","airdrops","uniswap","defi"
+		"crypto","bitcoin","ethereum","eth","btc","solana","sol","airdrop","nft","web3","altcoin","memecoin","shitcoin","token","seed round","binance","coinbase","pumpfun","staking","airdrops","uniswap","defi"
 	];
 
 	let keywordList = [];
@@ -122,6 +122,8 @@
 				|| blockedHandles.includes(handleNorm)
 				|| (keywordRegex && (keywordRegex.test(handleNorm) || handleContainsKeyword(handleNorm)));
 			if (handleTriggers) {
+				// Learn this handle so stats align with learned count
+				addToAutoBlocklist(handleNorm);
 				const blockReason = getBlockReason('', handleNorm) || `Learned handle: ${handleNorm}`;
 				const cover = ensureProfileCover(container, handleNorm, blockReason);
 				const timelineRegion = container.querySelector('section[role="region"]');
@@ -129,12 +131,12 @@
 				if (cover) cover.style.display = 'flex';
 				hideFloatingReblock(container);
 				container.style.minHeight = '100vh';
-				if (!countedProfileHandles.has(handleNorm)) { countedProfileHandles.add(handleNorm); incrementStat('profilesBlocked'); }
+				// No direct profilesBlocked increment here; addToAutoBlocklist handles unique counting
 				return;
 			}
 		}
 		const hide = shouldHideTextAndHandle(text, handleNorm, true);
-		if (hide) { const blockReason = getBlockReason(text, handleNorm); const cover = ensureProfileCover(container, handleNorm, blockReason); const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = 'none'; if (cover) cover.style.display = 'flex'; hideFloatingReblock(container); container.style.minHeight = '100vh'; if (handleNorm && !countedProfileHandles.has(handleNorm)) { countedProfileHandles.add(handleNorm); incrementStat('profilesBlocked'); } } else { const cover = ensureProfileCover(container, handleNorm); if (cover) cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; hideFloatingReblock(container); }
+		if (hide) { const blockReason = getBlockReason(text, handleNorm); const cover = ensureProfileCover(container, handleNorm, blockReason); const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = 'none'; if (cover) cover.style.display = 'flex'; hideFloatingReblock(container); container.style.minHeight = '100vh'; } else { const cover = ensureProfileCover(container, handleNorm); if (cover) cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; hideFloatingReblock(container); }
 	} catch (_) {} }
 
 	function isOnSearchPage() { return location.pathname.startsWith('/search'); }
@@ -175,7 +177,7 @@
 	}
 
 	function extractUserCellInfo(userCell) { let handle = ''; let text = ''; const userNameGroup = userCell.querySelector('[data-testid="User-Name"]'); if (userNameGroup) { const spans = userNameGroup.querySelectorAll('span'); for (const s of spans) { const t = (s.textContent || '').trim(); if (t.startsWith('@') && t.length > 1 && !t.includes(' ')) { handle = t; break; } } } if (!handle) { const profileLink = userCell.querySelector('a[href^="/" i][role="link"]'); if (profileLink) handle = extractHandleFromHref(profileLink.getAttribute('href')); } const bio = userCell.querySelector('[data-testid="UserDescription"], div[dir]'); const nameNode = userCell.querySelector('[data-testid="User-Name"]'); text = [nameNode ? nameNode.textContent : '', bio ? bio.textContent : ''].join(' ').trim(); if (!text) text = (userCell.textContent || '').trim(); return { handle, text }; }
-	function processUserCell(el) { try { if (isPaused) return; if (processedUserCells.has(el)) return; processedUserCells.add(el); const info = extractUserCellInfo(el); if (shouldHideTextAndHandle(info.text, info.handle, true)) { hideElement(el); incrementStat('profilesBlocked'); } } catch (_) {} }
+	function processUserCell(el) { try { if (isPaused) return; if (processedUserCells.has(el)) return; processedUserCells.add(el); const info = extractUserCellInfo(el); if (shouldHideTextAndHandle(info.text, info.handle, true)) { hideElement(el); /* profilesBlocked aligns to learned via addToAutoBlocklist */ } } catch (_) {} }
 	function scanExistingUserCells() { const cells = document.querySelectorAll('[data-testid="UserCell"], [data-testid="TypeaheadUser"], [data-testid="UserCell-Enhanced"], [data-testid="cellInnerDiv"]'); for (const c of cells) processUserCell(c); }
 
 	async function mergeBundledBlocklist() {

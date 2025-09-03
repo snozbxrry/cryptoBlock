@@ -24,9 +24,14 @@
 
 	function init() {
 		setVersion();
-		chrome.storage.local.get({ paused: false, autoBlockedHandles: [] }, ({ paused, autoBlockedHandles }) => {
+		chrome.storage.local.get({ paused: false, autoBlockedHandles: [], stats: { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 } }, ({ paused, autoBlockedHandles, stats }) => {
 			setStatusText(Boolean(paused));
 			setHandlesCount(Array.isArray(autoBlockedHandles) ? autoBlockedHandles.length : 0);
+			try {
+				document.getElementById('statTweets').textContent = (stats && stats.tweetsHidden) || 0;
+				document.getElementById('statProfiles').textContent = (stats && stats.profilesBlocked) || 0;
+				document.getElementById('statKeywords').textContent = (stats && stats.keywordsMatched) || 0;
+			} catch (_) {}
 		});
 
 		const openOptionsBtn = document.getElementById('openOptions');
