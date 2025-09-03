@@ -23,7 +23,7 @@ A powerful Chrome extension that automatically hides tweets, profiles, and conte
 ## 📦 Installation
 
 ### From Chrome Web Store
-1. Visit the [Chrome Web Store page](TBD)
+1. Visit the [Chrome Web Store page](https://chrome.google.com/webstore/detail/cryptoblock-for-x-twitter/your-extension-id)
 2. Click "Add to Chrome"
 3. Confirm the installation
 
@@ -228,12 +228,20 @@ This project is licensed under the PolyForm Noncommercial License 1.0.0. You may
 ## 📞 Support
 
 - **GitHub Issues**: Report bugs and request features
+- **Twitter/X**: Contact [@snozbxrry](https://x.com/snozbxrry) for support
 - **Chrome Web Store**: Leave reviews and ratings
-- **Email**: [Your contact email]
 
 ## 🔄 Version History
 
-### v0.1.0 (Current)
+### v0.2.0 (Current)
+- Improved keyword matching with Unicode support
+- Enhanced handle detection for embedded crypto terms
+- Better search page filtering (all tabs)
+- Full settings export/import functionality
+- Noncommercial license added
+- UI improvements and bug fixes
+
+### v0.1.0
 - Initial release
 - Basic keyword filtering
 - Profile blocking
@@ -242,7 +250,6 @@ This project is licensed under the PolyForm Noncommercial License 1.0.0. You may
 - Global pause/resume
 
 ### Planned Features
-- **v0.2.0**: Advanced filtering rules
 - **v0.3.0**: Multiple profile support
 - **v0.4.0**: Custom CSS themes
 - **v0.5.0**: Analytics dashboard
