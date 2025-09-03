@@ -43,7 +43,7 @@ textarea { width: 100%; box-sizing: border-box; background: #0b0f14; color: #e6e
 *::-webkit-scrollbar-thumb:hover { background: #556275; }
 
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-button, .import-label span { background: #1d9bf0; border: none; color: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+button, .import-label span { background: #1d9bf0; border: none; color: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 14px; line-height: 1.2; }
 button#reset, #clearLearned { background: #6b7280; }
 .import-label input { display: none; }
 
@@ -52,3 +52,6 @@ button#reset, #clearLearned { background: #6b7280; }
 .learned-list summary { cursor: pointer; color: #9ecbff; }
 .learned-list ul { list-style: none; padding: 8px 0 0; margin: 0; max-height: 220px; overflow: auto; border-top: 1px solid #232a34; }
 .learned-list li { padding: 6px 0; border-bottom: 1px solid #18202a; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+
+.footer { position: sticky; bottom: 0; z-index: 4; background: linear-gradient(0deg, rgba(15,20,25,0.97) 0%, rgba(15,20,25,0.92) 100%); border-top: 1px solid #232a34; margin: 24px -16px 0; padding: 10px 16px; }
+.footer-actions { display: flex; gap: 8px; justify-content: flex-end; }

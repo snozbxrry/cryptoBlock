@@ -4,6 +4,7 @@
 	];
 
 	let keywordList = [];
+	let keywordRegex = null;
 	let blockedHandles = [];
 	let exceptions = [];
 	let autoBlockedSet = new Set();
@@ -13,9 +14,22 @@
 	let isPaused = false;
 	let lastScanTime = 0;
 	const SCAN_THROTTLE_MS = 1000; 
+	const processedTweets = new WeakSet();
+	const processedUserCells = new WeakSet();
 
 	function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
-	function buildRegexFromKeywords(keywords) { const parts = keywords.map(k => k.trim()).filter(k => k.length > 0).map(escapeRegex); if (parts.length === 0) return null; return new RegExp(`\\b(?:${parts.join("|")})\\b`, "i"); }
+	function rebuildKeywordRegex() {
+		const parts = (keywordList || [])
+			.map(k => (k || "").trim())
+			.filter(k => k.length > 0)
+			.map(k => {
+				const e = escapeRegex(k);
+				return `[#\\$]?${e}`;
+			});
+		if (parts.length === 0) { keywordRegex = null; return; }
+		// Match keyword or #keyword or $keyword with loose boundaries around non-word Unicode chars
+		keywordRegex = new RegExp(`(^|[^\\p{L}\\p{N}_])(?:${parts.join("|")})(?=$|[^\\p{L}\\p{N}_])`, "iu");
+	}
 	function normalizeHandle(handle) { if (!handle) return ""; let h = handle.trim(); if (!h.startsWith("@")) h = "@" + h; return h.toLowerCase(); }
 	function extractHandleFromHref(href) { try { if (!href) return ""; const clean = href.split('?')[0].split('#')[0]; const seg = clean.split('/').filter(Boolean)[0] || ''; if (!seg) return ""; if (["i","explore","settings","home","notifications"].includes(seg)) return ""; return '@' + seg; } catch (_) { return ""; } }
 	function extractHandleFromUrl() { try { return extractHandleFromHref(location.pathname); } catch (_) { return ""; } }
@@ -39,18 +53,55 @@
 		chrome.storage.local.set({ exceptions });
 	}
 
-	function shouldHideTextAndHandle(textContent, authorHandle, learn = false) { const text = (textContent || "").toLowerCase(); const handleNorm = normalizeHandle(authorHandle); if (isExcepted(handleNorm)) return false; if (handleNorm && autoBlockedSet.has(handleNorm)) return true; if (handleNorm && blockedHandles.includes(handleNorm)) return true; const regex = buildRegexFromKeywords(keywordList); if (!regex) return false; const matched = regex.test(text) || (handleNorm && regex.test(handleNorm)); if (matched && learn && handleNorm) addToAutoBlocklist(handleNorm); return matched; }
-	function getBlockReason(textContent, authorHandle) { const text = (textContent || "").toLowerCase(); const handleNorm = normalizeHandle(authorHandle); if (isExcepted(handleNorm)) return null; if (handleNorm && autoBlockedSet.has(handleNorm)) return `Learned handle: ${handleNorm}`; if (handleNorm && blockedHandles.includes(handleNorm)) return `Manually blocked: ${handleNorm}`; const regex = buildRegexFromKeywords(keywordList); if (!regex) return null; const matched = regex.test(text) || (handleNorm && regex.test(handleNorm)); if (matched) { const matchedKeywords = keywordList.filter(k => { const keywordRegex = new RegExp(`\\b${escapeRegex(k)}\\b`, 'i'); return keywordRegex.test(text) || (handleNorm && keywordRegex.test(handleNorm)); }); return `Keywords: ${matchedKeywords.slice(0, 3).join(', ')}${matchedKeywords.length > 3 ? '...' : ''}`; } return null; }
-	function findAuthorHandle(tweetEl) { const withAt = tweetEl.querySelector('a[role="link"] span'); if (withAt && withAt.textContent && withAt.textContent.includes('@')) return withAt.textContent.trim(); const profileLink = tweetEl.querySelector('a[role="link"][href^="/" i]:not([href*="status"])'); if (profileLink) { const candidate = extractHandleFromHref(profileLink.getAttribute('href')); if (candidate) return candidate; } const possible = tweetEl.querySelectorAll('span'); for (const span of possible) { const t = span.textContent || ""; if (t.startsWith('@') && t.length > 1 && !t.includes(' ')) return t.trim(); } return ""; }
+	function normalizeTextForMatch(s) { try { return (s || "").normalize('NFKC'); } catch (_) { return s || ""; } }
+	function handleContainsKeyword(handleNorm) {
+		if (!handleNorm) return false;
+		const h = String(handleNorm).toLowerCase();
+		for (const k of keywordList) {
+			const kk = String(k || '').toLowerCase().trim();
+			if (kk.length < 3) continue;
+			if (h.includes(kk)) return true;
+		}
+		return false;
+	}
+	function shouldHideTextAndHandle(textContent, authorHandle, learn = false) {
+		const text = normalizeTextForMatch(textContent);
+		const handleNorm = normalizeHandle(authorHandle);
+		if (isExcepted(handleNorm)) return false;
+		if (handleNorm && autoBlockedSet.has(handleNorm)) return true;
+		if (handleNorm && blockedHandles.includes(handleNorm)) return true;
+		if (!keywordRegex) return false;
+		const matched = keywordRegex.test(text) || (handleNorm && (keywordRegex.test(handleNorm) || handleContainsKeyword(handleNorm)));
+		if (matched && learn && handleNorm) addToAutoBlocklist(handleNorm);
+		return matched;
+	}
+	function getBlockReason(textContent, authorHandle) {
+		const text = normalizeTextForMatch(textContent);
+		const handleNorm = normalizeHandle(authorHandle);
+		if (isExcepted(handleNorm)) return null;
+		if (handleNorm && autoBlockedSet.has(handleNorm)) return `Learned handle: ${handleNorm}`;
+		if (handleNorm && blockedHandles.includes(handleNorm)) return `Manually blocked: ${handleNorm}`;
+		if (!keywordRegex) return null;
+		if (keywordRegex.test(text) || (handleNorm && (keywordRegex.test(handleNorm) || handleContainsKeyword(handleNorm)))) {
+			const matchedKeywords = keywordList.filter(k => {
+				const e = escapeRegex(k);
+				const r = new RegExp(`(^|[^\\\p{L}\\\p{N}_])[#\\$]?${e}(?=$|[^\\\p{L}\\\p{N}_])`, 'iu');
+				return r.test(text) || (handleNorm && (r.test(handleNorm) || String(handleNorm).toLowerCase().includes(String(k).toLowerCase())));
+			});
+			return `Keywords: ${matchedKeywords.slice(0, 3).join(', ')}${matchedKeywords.length > 3 ? '...' : ''}`;
+		}
+		return null;
+	}
+	function findAuthorHandle(tweetEl) { const withAt = tweetEl.querySelector('a[role="link"] span'); if (withAt && withAt.textContent && withAt.textContent.includes('@')) return withAt.textContent.trim(); let profileLink = tweetEl.querySelector('[data-testid="User-Name"] a[href^="/" i]'); if (!profileLink) profileLink = tweetEl.querySelector('a[role="link"][href^="/" i]'); if (profileLink) { const candidate = extractHandleFromHref(profileLink.getAttribute('href')); if (candidate) return candidate; } const possible = tweetEl.querySelectorAll('span'); for (const span of possible) { const t = span.textContent || ""; if (t.startsWith('@') && t.length > 1 && !t.includes(' ')) return t.trim(); } return ""; }
 	function extractTweetText(tweetEl) { let chunks = []; for (const n of tweetEl.querySelectorAll('[data-testid="tweetText"]')) if (n && n.textContent) chunks.push(n.textContent); for (const n of tweetEl.querySelectorAll('div[lang], div[dir]')) if (n && n.textContent) chunks.push(n.textContent); for (const n of tweetEl.querySelectorAll('article [data-testid="tweetText"], article div[lang]')) if (n && n.textContent) chunks.push(n.textContent); if (chunks.length === 0 && tweetEl.textContent) chunks.push(tweetEl.textContent); return chunks.join(' ').replace(/\s+/g,' ').trim(); }
 	function hideElement(el) { const cell = el.closest('[data-testid="cellInnerDiv"]') || el.closest('[data-testid="UserCell"]') || el; cell.style.display = 'none'; }
-	function processTweet(tweetEl) { try { if (isPaused) return; const text = extractTweetText(tweetEl); const handle = findAuthorHandle(tweetEl); if (shouldHideTextAndHandle(text, handle, true)) hideElement(tweetEl); } catch (_) {} }
+	function processTweet(tweetEl) { try { if (isPaused) return; if (processedTweets.has(tweetEl)) return; processedTweets.add(tweetEl); const text = extractTweetText(tweetEl); const handle = findAuthorHandle(tweetEl); if (shouldHideTextAndHandle(text, handle, true)) hideElement(tweetEl); } catch (_) {} }
 	function scanExistingTweets() { if (isPaused) return; const now = Date.now(); if (now - lastScanTime < SCAN_THROTTLE_MS) return; lastScanTime = now; const tweets = document.querySelectorAll('article[role="article"]'); for (const t of tweets) processTweet(t); }
 
 	function collectProfileText() { const nameEl = document.querySelector('div[data-testid="UserName"] span'); const bioEl = document.querySelector('div[data-testid="UserDescription"]'); const handleEl = document.querySelector('div[data-testid="UserName"] a[href^="/" i] span'); const name = nameEl ? nameEl.textContent || '' : ''; const bio = bioEl ? bioEl.textContent || '' : ''; let handle = handleEl ? handleEl.textContent || '' : ''; if (!handle) handle = extractHandleFromUrl(); return { text: (name + ' ' + bio).trim(), handle }; }
 	function injectFloatingReblock(container, handle) { let btn = container.querySelector('.cryptoBlock-reblock-btn'); if (!btn) { btn = document.createElement('button'); btn.className = 'cryptoBlock-reblock-btn'; btn.textContent = 'Block again'; btn.style.position = 'absolute'; btn.style.top = '8px'; btn.style.right = '8px'; btn.style.zIndex = '10000'; btn.style.background = '#ef4444'; btn.style.border = 'none'; btn.style.color = '#fff'; btn.style.padding = '6px 10px'; btn.style.borderRadius = '6px'; btn.style.cursor = 'pointer'; container.style.position = container.style.position || 'relative'; container.appendChild(btn); } btn.onclick = () => { const h = normalizeHandle(handle || extractHandleFromUrl()); if (h) { sessionAllowlist.delete(h); removeFromExceptionsPersistent(h); } applyProfilePageBlocking(); }; btn.style.display = 'block'; }
 	function hideFloatingReblock(container) { const btn = container.querySelector('.cryptoBlock-reblock-btn'); if (btn) btn.style.display = 'none'; }
-	function ensureProfileCover(container, handle, blockReason = null) { let cover = container.querySelector('.cryptoBlock-profile-cover'); if (!cover) { cover = document.createElement('div'); cover.className = 'cryptoBlock-profile-cover'; cover.style.position = 'absolute'; cover.style.inset = '0'; cover.style.background = '#000'; cover.style.color = '#fff'; cover.style.display = 'flex'; cover.style.flexDirection = 'column'; cover.style.alignItems = 'center'; cover.style.justifyContent = 'center'; cover.style.gap = '12px'; cover.style.fontSize = '16px'; cover.style.zIndex = '9999'; const msg = document.createElement('div'); msg.textContent = 'Profile hidden by cryptoBlock'; const reasonEl = document.createElement('div'); reasonEl.className = 'cryptoBlock-reason'; reasonEl.style.fontSize = '14px'; reasonEl.style.color = '#ccc'; reasonEl.style.textAlign = 'center'; reasonEl.style.maxWidth = '300px'; reasonEl.style.lineHeight = '1.4'; const btn = document.createElement('button'); btn.textContent = 'Show profile'; btn.style.background = '#1d9bf0'; btn.style.border = 'none'; btn.style.color = '#fff'; btn.style.padding = '8px 14px'; btn.style.borderRadius = '6px'; btn.style.cursor = 'pointer'; btn.addEventListener('click', () => { const hUrl = extractHandleFromUrl(); const hText = normalizeHandle(handle); const chosen = normalizeHandle(hText || hUrl); if (chosen) { sessionAllowlist.add(chosen); addToExceptionsPersistent(chosen); } cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"], [data-testid="primaryColumn"] section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; injectFloatingReblock(container, chosen); }); cover.appendChild(msg); cover.appendChild(reasonEl); cover.appendChild(btn); container.style.position = container.style.position || 'relative'; container.appendChild(cover); } const reasonEl = cover.querySelector('.cryptoBlock-reason'); if (reasonEl) { reasonEl.textContent = blockReason || ''; reasonEl.style.display = blockReason ? 'block' : 'none'; } return cover; }
+	function ensureProfileCover(container, handle, blockReason = null) { let cover = container.querySelector('.cryptoBlock-profile-cover'); if (!cover) { cover = document.createElement('div'); cover.className = 'cryptoBlock-profile-cover'; cover.style.position = 'absolute'; cover.style.inset = '0'; cover.style.background = '#000'; cover.style.color = '#fff'; cover.style.display = 'flex'; cover.style.flexDirection = 'column'; cover.style.alignItems = 'center'; cover.style.justifyContent = 'center'; cover.style.gap = '12px'; cover.style.fontSize = '16px'; cover.style.zIndex = '9999'; const msg = document.createElement('div'); msg.textContent = 'Profile hidden by cryptoBlock'; const reasonEl = document.createElement('div'); reasonEl.className = 'cryptoBlock-reason'; reasonEl.style.fontSize = '14px'; reasonEl.style.color = '#ccc'; reasonEl.style.textAlign = 'center'; reasonEl.style.maxWidth = '300px'; reasonEl.style.lineHeight = '1.4'; const btn = document.createElement('button'); btn.textContent = 'Show profile'; btn.style.background = '#1d9bf0'; btn.style.border = 'none'; btn.style.color = '#fff'; btn.style.padding = '8px 14px'; btn.style.borderRadius = '6px'; btn.style.cursor = 'pointer'; btn.addEventListener('click', () => { const hUrl = extractHandleFromUrl(); const hText = normalizeHandle(handle); const chosen = normalizeHandle(hText || hUrl); if (chosen) { sessionAllowlist.add(chosen); addToExceptionsPersistent(chosen); if (autoBlockedSet.has(chosen)) { autoBlockedSet.delete(chosen); schedulePersistAutoBlocklist(); } } cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"], [data-testid="primaryColumn"] section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; injectFloatingReblock(container, chosen); }); cover.appendChild(msg); cover.appendChild(reasonEl); cover.appendChild(btn); container.style.position = container.style.position || 'relative'; container.appendChild(cover); } const reasonEl = cover.querySelector('.cryptoBlock-reason'); if (reasonEl) { reasonEl.textContent = blockReason || ''; reasonEl.style.display = blockReason ? 'block' : 'none'; } return cover; }
 	function applyProfilePageBlocking() { try { const main = document.querySelector('main[role="main"]'); if (!main) return; let container = main.querySelector('div[data-testid="primaryColumn"]') || main; const { text, handle } = collectProfileText(); const handleNorm = normalizeHandle(handle || extractHandleFromUrl());
 		if (isPaused) { const cover = ensureProfileCover(container, handleNorm); if (cover) cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; hideFloatingReblock(container); return; }
 		if (handleNorm && sessionAllowlist.has(handleNorm)) { const cover = ensureProfileCover(container, handleNorm); if (cover) cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; injectFloatingReblock(container, handleNorm); return; }
@@ -91,16 +142,12 @@
 		observer.observe(root, { childList: true, subtree: true });
 		setInterval(() => {
 			if (isPaused) return;
-			if (isOnPeopleSearchPage()) {
-				scanSearchPeopleCells();
-			} else if (isOnSearchPage()) {
-				scanSearchTweets();
-			}
+			if (isOnSearchPage()) { scanSearchTweets(); scanSearchPeopleCells(); }
 		}, 2000);
 	}
 
 	function extractUserCellInfo(userCell) { let handle = ''; let text = ''; const userNameGroup = userCell.querySelector('[data-testid="User-Name"]'); if (userNameGroup) { const spans = userNameGroup.querySelectorAll('span'); for (const s of spans) { const t = (s.textContent || '').trim(); if (t.startsWith('@') && t.length > 1 && !t.includes(' ')) { handle = t; break; } } } if (!handle) { const profileLink = userCell.querySelector('a[href^="/" i][role="link"]'); if (profileLink) handle = extractHandleFromHref(profileLink.getAttribute('href')); } const bio = userCell.querySelector('[data-testid="UserDescription"], div[dir]'); const nameNode = userCell.querySelector('[data-testid="User-Name"]'); text = [nameNode ? nameNode.textContent : '', bio ? bio.textContent : ''].join(' ').trim(); if (!text) text = (userCell.textContent || '').trim(); return { handle, text }; }
-	function processUserCell(el) { try { if (isPaused) return; const info = extractUserCellInfo(el); if (shouldHideTextAndHandle(info.text, info.handle, true)) hideElement(el); } catch (_) {} }
+	function processUserCell(el) { try { if (isPaused) return; if (processedUserCells.has(el)) return; processedUserCells.add(el); const info = extractUserCellInfo(el); if (shouldHideTextAndHandle(info.text, info.handle, true)) hideElement(el); } catch (_) {} }
 	function scanExistingUserCells() { const cells = document.querySelectorAll('[data-testid="UserCell"], [data-testid="TypeaheadUser"], [data-testid="UserCell-Enhanced"], [data-testid="cellInnerDiv"]'); for (const c of cells) processUserCell(c); }
 
 	async function mergeBundledBlocklist() {
@@ -123,23 +170,35 @@
 			autoBlockedSet = new Set((local.autoBlockedHandles || []).map(normalizeHandle));
 			isPaused = Boolean(local.paused);
 			await mergeBundledBlocklist();
-			chrome.storage.sync.get({ keywords: local.keywords, blockedHandles: local.blockedHandles, exceptions: local.exceptions }, (syncVals) => {
-				keywordList = Array.isArray(local.keywords) ? local.keywords : (Array.isArray(syncVals.keywords) ? syncVals.keywords : DEFAULT_KEYWORDS);
-				blockedHandles = (Array.isArray(local.blockedHandles) ? local.blockedHandles : (Array.isArray(syncVals.blockedHandles) ? syncVals.blockedHandles : [])).map(normalizeHandle);
-				exceptions = (Array.isArray(local.exceptions) ? local.exceptions : (Array.isArray(syncVals.exceptions) ? syncVals.exceptions : [])).map(normalizeHandle);
-				scanExistingTweets();
-				scanExistingUserCells();
-				if (isOnSearchPage()) { scanSearchTweets(); }
-				if (isOnPeopleSearchPage()) scanSearchPeopleCells();
-				observeTimeline();
-				applyProfilePageBlocking();
-				setInterval(applyProfilePageBlocking, 3000);
-			});
+			keywordList = Array.isArray(local.keywords) ? local.keywords : DEFAULT_KEYWORDS;
+			blockedHandles = (Array.isArray(local.blockedHandles) ? local.blockedHandles : []).map(normalizeHandle);
+			exceptions = (Array.isArray(local.exceptions) ? local.exceptions : []).map(normalizeHandle);
+			rebuildKeywordRegex();
+			scanExistingTweets();
+			scanExistingUserCells();
+			if (isOnSearchPage()) { scanSearchTweets(); scanSearchPeopleCells(); }
+			observeTimeline();
+			applyProfilePageBlocking();
+			setInterval(applyProfilePageBlocking, 3000);
 		});
 		chrome.storage.onChanged.addListener((changes, area) => {
-			if (area === 'local' && Object.prototype.hasOwnProperty.call(changes, 'paused')) {
+			if (area !== 'local') return;
+			if (Object.prototype.hasOwnProperty.call(changes, 'paused')) {
 				isPaused = Boolean(changes.paused.newValue);
 				applyProfilePageBlocking();
+			}
+			if (Object.prototype.hasOwnProperty.call(changes, 'keywords')) {
+				keywordList = Array.isArray(changes.keywords.newValue) ? changes.keywords.newValue : keywordList;
+				rebuildKeywordRegex();
+			}
+			if (Object.prototype.hasOwnProperty.call(changes, 'blockedHandles')) {
+				blockedHandles = (Array.isArray(changes.blockedHandles.newValue) ? changes.blockedHandles.newValue : blockedHandles).map(normalizeHandle);
+			}
+			if (Object.prototype.hasOwnProperty.call(changes, 'exceptions')) {
+				exceptions = (Array.isArray(changes.exceptions.newValue) ? changes.exceptions.newValue : exceptions).map(normalizeHandle);
+			}
+			if (Object.prototype.hasOwnProperty.call(changes, 'autoBlockedHandles')) {
+				autoBlockedSet = new Set((changes.autoBlockedHandles.newValue || []).map(normalizeHandle));
 			}
 		});
 	}

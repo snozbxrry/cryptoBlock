@@ -47,10 +47,15 @@
 			.split(/\n+/)
 			.map(normalizeHandle)
 			.filter(Boolean);
-		chrome.storage.local.set({ keywords, blockedHandles: handles, exceptions }, () => {
+		chrome.storage.local.get({ autoBlockedHandles: [] }, (local) => {
+			const learned = new Set((local.autoBlockedHandles || []).map(normalizeHandle));
+			for (const ex of exceptions) { if (learned.has(ex)) learned.delete(ex); }
+			chrome.storage.local.set({ keywords, blockedHandles: handles, exceptions, autoBlockedHandles: Array.from(learned) }, () => {
 			const btn = document.getElementById('save');
 			btn.textContent = 'Saved!';
 			setTimeout(() => { btn.textContent = 'Save changes'; }, 1200);
+			refreshLearned();
+		});
 		});
 	}
 
@@ -73,6 +78,58 @@
 				li.textContent = h;
 				ul.appendChild(li);
 			}
+		});
+	}
+
+	function exportAll() {
+		chrome.storage.local.get({ keywords: DEFAULT_KEYWORDS, blockedHandles: [], exceptions: [], autoBlockedHandles: [] }, async (data) => {
+			const bundled = await getBundledSet();
+			const autoBlockedHandles = (data.autoBlockedHandles || []).map(normalizeHandle).filter(Boolean).filter(h => !bundled.has(h));
+			const payload = {
+				keywords: Array.isArray(data.keywords) ? data.keywords : DEFAULT_KEYWORDS,
+				blockedHandles: (data.blockedHandles || []).map(normalizeHandle).filter(Boolean),
+				exceptions: (data.exceptions || []).map(normalizeHandle).filter(Boolean),
+				autoBlockedHandles
+			};
+			const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = 'cryptoBlock-settings.json';
+			a.click();
+			URL.revokeObjectURL(url);
+		});
+	}
+
+	function importAll(file) {
+		const reader = new FileReader();
+		reader.onload = async () => {
+			try {
+				const obj = JSON.parse(reader.result);
+				if (!obj || typeof obj !== 'object') return;
+				const bundled = await getBundledSet();
+				const keywords = Array.isArray(obj.keywords) ? obj.keywords.map(s => String(s).trim()).filter(Boolean) : undefined;
+				const blockedHandles = Array.isArray(obj.blockedHandles) ? obj.blockedHandles.map(normalizeHandle).filter(Boolean) : undefined;
+				const exceptions = Array.isArray(obj.exceptions) ? obj.exceptions.map(normalizeHandle).filter(Boolean) : undefined;
+				const autoBlockedHandles = Array.isArray(obj.autoBlockedHandles) ? obj.autoBlockedHandles.map(normalizeHandle).filter(Boolean).filter(h => !bundled.has(h)) : undefined;
+				const toSet = {};
+				if (keywords) toSet.keywords = keywords;
+				if (blockedHandles) toSet.blockedHandles = blockedHandles;
+				if (exceptions) toSet.exceptions = exceptions;
+				if (autoBlockedHandles) toSet.autoBlockedHandles = Array.from(new Set(autoBlockedHandles));
+				chrome.storage.local.set(toSet, () => {
+					load();
+					refreshLearned();
+				});
+			} catch (_) {}
+		};
+		reader.readAsText(file);
+	}
+
+	function resetAll() {
+		chrome.storage.local.set({ keywords: DEFAULT_KEYWORDS, blockedHandles: [], exceptions: [], autoBlockedHandles: [] }, () => {
+			load();
+			refreshLearned();
 		});
 	}
 
@@ -117,6 +174,12 @@
 		load();
 		document.getElementById('save').addEventListener('click', save);
 		document.getElementById('reset').addEventListener('click', resetDefaults);
+		document.getElementById('exportAll').addEventListener('click', exportAll);
+		document.getElementById('importAllFile').addEventListener('change', (e) => {
+			const file = e.target.files && e.target.files[0];
+			if (file) importAll(file);
+			e.target.value = '';
+		});
 		document.getElementById('exportLearned').addEventListener('click', exportLearned);
 		document.getElementById('importFile').addEventListener('change', (e) => {
 			const file = e.target.files && e.target.files[0];
@@ -124,5 +187,11 @@
 			e.target.value = '';
 		});
 		document.getElementById('clearLearned').addEventListener('click', clearLearned);
+		// Optional: expose a full reset button via Shift+Reset defaults
+		document.getElementById('reset').addEventListener('click', (e) => {
+			if (e.shiftKey) {
+				resetAll();
+			}
+		});
 	});
 })();

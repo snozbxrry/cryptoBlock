@@ -3,13 +3,13 @@
 **Last updated:** September 2, 2025
 
 ## Overview
-CryptoBlock is a browser extension designed to block cryptocurrency mining scripts and protect users from unwanted crypto mining activities. This privacy policy explains how we handle your data.
+CryptoBlock is a browser extension that hides crypto-related content (tweets, profiles, and search results) on X (formerly Twitter). This privacy policy explains how we handle your data.
 
 ## Data Collection
 **We do not collect, store, or transmit any personal information.**
 
 ## What We Do
-- **Block cryptocurrency mining scripts** on websites you visit
+- **Filter crypto-related content on X/Twitter** by analyzing page content locally
 - **No data collection** - we don't track your browsing history
 - **No personal information** is stored or transmitted
 - **No analytics** or user behavior tracking
@@ -24,12 +24,12 @@ CryptoBlock is a browser extension designed to block cryptocurrency mining scrip
 
 ## Technical Details
 - The extension operates entirely **client-side**
-- **No network requests** are made to external servers
-- **No data logging** or storage mechanisms
-- Blocking rules are applied **locally** in your browser
+- **No network requests** are made to external servers (aside from loading the bundled blocklist from within the extension)
+- **No data logging** or storage mechanisms beyond browser storage for your preferences
+- Filtering rules are applied **locally** in your browser's content script
 
 ## Permissions Required
-- **Access to web pages**: Required to detect and block crypto mining scripts
+- **Host permissions (twitter.com, x.com)**: Required to filter page content
 - **Storage**: Used only to save your personal blocking preferences locally
 
 ## Updates

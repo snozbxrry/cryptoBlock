@@ -11,8 +11,11 @@
 			<div class="toolbar">
 				<h1 class="title">cryptoBlock Options</h1>
 				<div class="actions">
-					<button id="save">Save changes</button>
-					<button id="reset">Reset to defaults</button>
+					<button id="exportAll">Export all</button>
+					<label class="import-label">
+						<input id="importAllFile" type="file" accept="application/json" />
+						<span>Import all</span>
+					</label>
 				</div>
 			</div>
 
@@ -56,6 +59,14 @@
 					<p class="hint">Profiles and posts from these handles will never be hidden.</p>
 				</section>
 			</div>
+
+			<div class="footer">
+				<div class="footer-actions">
+					<button id="save">Save changes</button>
+					<button id="reset">Reset to defaults</button>
+				</div>
+			</div>
+
 		</div>
 		<script src="options.js"></script>
 	</body>

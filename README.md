@@ -1,5 +1,7 @@
 # cryptoBlock for X (Twitter)
 
+Note: This project is licensed for noncommercial use only. See `LICENSE`.
+
 A powerful Chrome extension that automatically hides tweets, profiles, and content related to cryptocurrency, NFTs, and blockchain on X (formerly Twitter). cryptoBlock helps you maintain a cleaner timeline by filtering out crypto-related content while preserving your ability to see other posts.
 
 ## 🚀 Features
@@ -15,7 +17,7 @@ A powerful Chrome extension that automatically hides tweets, profiles, and conte
 - **Exception Management**: Allow specific handles to bypass filtering
 - **Session Allowlist**: Temporarily show blocked profiles during your session
 - **Bundled Blocklist**: Pre-configured list of known crypto accounts
-- **JSON Import/Export**: Backup and restore your blocklists
+- **JSON Import/Export**: Backup and restore keywords, manual, exceptions, and learned lists
 - **Real-time Updates**: Immediate filtering as new content loads
 
 ## 📦 Installation
@@ -106,7 +108,7 @@ cryptblock/
 ## 🔧 Configuration
 
 ### JSON Import/Export
-You can backup and restore your configuration:
+You can backup and restore your configuration (Options toolbar → Export all / Import all). Learned handles exclude bundled blocklist entries to avoid duplicates.
 
 **Export Format:**
 ```json
@@ -119,10 +121,9 @@ You can backup and restore your configuration:
 ```
 
 **Import Process:**
-1. Go to Options → Data Management
-2. Click "Import JSON"
-3. Select your backup file
-4. Confirm the import
+1. Go to Options → toolbar → Import all
+2. Select your backup file (cryptoBlock-settings.json)
+3. Confirm the import
 
 ### Custom Keywords
 Add your own filtering terms:
@@ -146,9 +147,9 @@ The extension uses minimal styling that doesn't interfere with X's interface:
 - **Buttons**: Styled to match X's design language
 
 ### Performance
-- **Efficient Filtering**: Uses optimized regex patterns
-- **Minimal DOM Impact**: Only hides elements, doesn't modify structure
-- **Memory Management**: Automatic cleanup of unused data
+- **Efficient Filtering**: Cached regex with support for hashtags/cashtags and Unicode
+- **Minimal DOM Impact**: MutationObserver with de-duplication to avoid reprocessing
+- **Memory Management**: Automatic cleanup and throttled scans
 
 ## 🔒 Privacy & Security
 
@@ -216,7 +217,7 @@ When reporting bugs, please include:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the PolyForm Noncommercial License 1.0.0. You may use it for personal or internal, noncommercial purposes only. See the [LICENSE](LICENSE) file for full terms.
 
 ## 🙏 Acknowledgments
 
