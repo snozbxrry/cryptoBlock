@@ -131,7 +131,39 @@
 	function scanExistingTweets() { if (isPaused) return; const now = Date.now(); if (now - lastScanTime < SCAN_THROTTLE_MS) return; lastScanTime = now; const tweets = document.querySelectorAll('article[role="article"]'); for (const t of tweets) processTweet(t); }
 
 	function collectProfileText() { const nameEl = document.querySelector('div[data-testid="UserName"] span'); const bioEl = document.querySelector('div[data-testid="UserDescription"]'); const handleEl = document.querySelector('div[data-testid="UserName"] a[href^="/" i] span'); const name = nameEl ? nameEl.textContent || '' : ''; const bio = bioEl ? bioEl.textContent || '' : ''; let handle = handleEl ? handleEl.textContent || '' : ''; if (!handle) handle = extractHandleFromUrl(); return { text: (name + ' ' + bio).trim(), handle }; }
-	function injectFloatingReblock(container, handle) { let btn = container.querySelector('.cryptoBlock-reblock-btn'); if (!btn) { btn = document.createElement('button'); btn.className = 'cryptoBlock-reblock-btn'; btn.textContent = 'Block again'; btn.style.position = 'absolute'; btn.style.top = '8px'; btn.style.right = '8px'; btn.style.zIndex = '10000'; btn.style.background = '#ef4444'; btn.style.border = 'none'; btn.style.color = '#fff'; btn.style.padding = '6px 10px'; btn.style.borderRadius = '6px'; btn.style.cursor = 'pointer'; container.style.position = container.style.position || 'relative'; container.appendChild(btn); } btn.onclick = () => { const h = normalizeHandle(handle || extractHandleFromUrl()); if (h) { sessionAllowlist.delete(h); removeFromExceptionsPersistent(h); } applyProfilePageBlocking(); }; btn.style.display = 'block'; }
+	function injectFloatingReblock(container, handle) { 
+		let btn = container.querySelector('.cryptoBlock-reblock-btn'); 
+		if (!btn) { 
+			btn = document.createElement('button'); 
+			btn.className = 'cryptoBlock-reblock-btn'; 
+			btn.textContent = 'Block again'; 
+			btn.style.position = 'absolute'; 
+			btn.style.top = '8px'; 
+			btn.style.right = '8px'; 
+			btn.style.zIndex = '10000'; 
+			btn.style.background = '#ef4444'; 
+			btn.style.border = 'none'; 
+			btn.style.color = '#fff'; 
+			btn.style.padding = '6px 10px'; 
+			btn.style.borderRadius = '6px'; 
+			btn.style.cursor = 'pointer'; 
+			container.style.position = container.style.position || 'relative'; 
+			container.appendChild(btn); 
+		} 
+		btn.onclick = () => { 
+			const h = normalizeHandle(handle || extractHandleFromUrl()); 
+			if (h) { 
+				sessionAllowlist.delete(h); 
+				removeFromExceptionsPersistent(h); 
+				if (autoBlockedSet.has(h)) { 
+					autoBlockedSet.delete(h); 
+					schedulePersistAutoBlocklist(); 
+				} 
+			} 
+			applyProfilePageBlocking(); 
+		}; 
+		btn.style.display = 'block'; 
+	}
 	function hideFloatingReblock(container) { const btn = container.querySelector('.cryptoBlock-reblock-btn'); if (btn) btn.style.display = 'none'; }
 	function ensureProfileCover(container, handle, blockReason = null) { let cover = container.querySelector('.cryptoBlock-profile-cover'); if (!cover) { cover = document.createElement('div'); cover.className = 'cryptoBlock-profile-cover'; cover.style.position = 'absolute'; cover.style.inset = '0'; cover.style.background = '#000'; cover.style.color = '#fff'; cover.style.display = 'flex'; cover.style.flexDirection = 'column'; cover.style.alignItems = 'center'; cover.style.justifyContent = 'center'; cover.style.gap = '12px'; cover.style.fontSize = '16px'; cover.style.zIndex = '9999'; const msg = document.createElement('div'); msg.textContent = 'Profile hidden by cryptoBlock'; const reasonEl = document.createElement('div'); reasonEl.className = 'cryptoBlock-reason'; reasonEl.style.fontSize = '14px'; reasonEl.style.color = '#ccc'; reasonEl.style.textAlign = 'center'; reasonEl.style.maxWidth = '300px'; reasonEl.style.lineHeight = '1.4'; const btn = document.createElement('button'); btn.textContent = 'Show profile'; btn.style.background = '#1d9bf0'; btn.style.border = 'none'; btn.style.color = '#fff'; btn.style.padding = '8px 14px'; btn.style.borderRadius = '6px'; btn.style.cursor = 'pointer'; btn.addEventListener('click', () => { const hUrl = extractHandleFromUrl(); const hText = normalizeHandle(handle); const chosen = normalizeHandle(hText || hUrl); if (chosen) { sessionAllowlist.add(chosen); addToExceptionsPersistent(chosen); if (autoBlockedSet.has(chosen)) { autoBlockedSet.delete(chosen); schedulePersistAutoBlocklist(); } } cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"], [data-testid="primaryColumn"] section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; injectFloatingReblock(container, chosen); }); cover.appendChild(msg); cover.appendChild(reasonEl); cover.appendChild(btn); container.style.position = container.style.position || 'relative'; container.appendChild(cover); } const reasonEl = cover.querySelector('.cryptoBlock-reason'); if (reasonEl) { reasonEl.textContent = blockReason || ''; reasonEl.style.display = blockReason ? 'block' : 'none'; } return cover; }
 	function applyProfilePageBlocking() { try { const main = document.querySelector('main[role="main"]'); if (!main) return; let container = main.querySelector('div[data-testid="primaryColumn"]') || main; const { text, handle } = collectProfileText(); const handleNorm = normalizeHandle(handle || extractHandleFromUrl());
