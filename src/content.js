@@ -1,7 +1,28 @@
 (function() {
-	const DEFAULT_KEYWORDS = [
+	const INLINE_DEFAULT_KEYWORDS = [
 		"crypto","bitcoin","ethereum","eth","btc","solana","sol","airdrop","nft","web3","altcoin","memecoin","shitcoin","token","seed round","binance","coinbase","pumpfun","staking","airdrops","uniswap","defi"
 	];
+
+	async function getSharedDefaults() {
+		try {
+			const url = chrome.runtime.getURL('src/defaults.json');
+			const res = await fetch(url);
+			if (!res || !res.ok) return INLINE_DEFAULT_KEYWORDS;
+			const arr = await res.json();
+			return Array.isArray(arr) ? arr.map(s => String(s).trim()).filter(Boolean) : INLINE_DEFAULT_KEYWORDS;
+		} catch (_) { return INLINE_DEFAULT_KEYWORDS; }
+	}
+
+	const OLD_DEFAULT_KEYWORDS = [
+		"crypto","bitcoin","ethereum","eth","btc","solana","sol","airdrop","nft","web3","altcoin","memecoin","shitcoin","token","ico","ido","seed round","binance","coinbase","pump","moon","ponzi","staking","airdrops","uniswap","defi"
+	];
+
+	function arraysEqual(a, b) {
+		if (!Array.isArray(a) || !Array.isArray(b)) return false;
+		if (a.length !== b.length) return false;
+		for (let i = 0; i < a.length; i++) { if (String(a[i]) !== String(b[i])) return false; }
+		return true;
+	}
 
 	let keywordList = [];
 	let keywordRegex = null;
@@ -196,7 +217,13 @@
 	}
 
 	function loadSettingsAndStart() {
-		chrome.storage.local.get({ autoBlockedHandles: [], keywords: DEFAULT_KEYWORDS, blockedHandles: [], exceptions: [], paused: false, stats: { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 } }, async (local) => {
+		chrome.storage.local.get({ autoBlockedHandles: [], keywords: INLINE_DEFAULT_KEYWORDS, blockedHandles: [], exceptions: [], paused: false, stats: { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 } }, async (local) => {
+			const DEFAULT_KEYWORDS = await getSharedDefaults();
+			// Migrate keywords if user has the exact old defaults
+			if (arraysEqual(local.keywords, OLD_DEFAULT_KEYWORDS)) {
+				try { chrome.storage.local.set({ keywords: DEFAULT_KEYWORDS }); } catch (_) {}
+				local.keywords = DEFAULT_KEYWORDS;
+			}
 			autoBlockedSet = new Set((local.autoBlockedHandles || []).map(normalizeHandle));
 			isPaused = Boolean(local.paused);
 			await mergeBundledBlocklist();

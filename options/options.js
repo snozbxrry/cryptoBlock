@@ -1,7 +1,29 @@
 (function() {
-	const DEFAULT_KEYWORDS = [
+	const INLINE_DEFAULT_KEYWORDS = [
+		"crypto","bitcoin","ethereum","eth","btc","solana","sol","airdrop","nft","web3","altcoin","memecoin","shitcoin","token","seed round","binance","coinbase","pumpfun","staking","airdrops","uniswap","defi"
+	];
+
+	async function getSharedDefaults() {
+		try {
+			const url = chrome.runtime.getURL('src/defaults.json');
+			const res = await fetch(url);
+			if (!res || !res.ok) return INLINE_DEFAULT_KEYWORDS;
+			const arr = await res.json();
+			return Array.isArray(arr) ? arr.map(s => String(s).trim()).filter(Boolean) : INLINE_DEFAULT_KEYWORDS;
+		} catch (_) { return INLINE_DEFAULT_KEYWORDS; }
+	}
+
+	// Previous default list (to migrate users who still have the old defaults saved)
+	const OLD_DEFAULT_KEYWORDS = [
 		"crypto","bitcoin","ethereum","eth","btc","solana","sol","airdrop","nft","web3","altcoin","memecoin","shitcoin","token","ico","ido","seed round","binance","coinbase","pump","moon","ponzi","staking","airdrops","uniswap","defi"
 	];
+
+	function arraysEqual(a, b) {
+		if (!Array.isArray(a) || !Array.isArray(b)) return false;
+		if (a.length !== b.length) return false;
+		for (let i = 0; i < a.length; i++) { if (String(a[i]) !== String(b[i])) return false; }
+		return true;
+	}
 
 	function normalizeHandle(h) {
 		if (!h) return '';
@@ -23,12 +45,18 @@
 
 	function load() {
 		chrome.storage.local.get({
-			keywords: DEFAULT_KEYWORDS,
+			keywords: INLINE_DEFAULT_KEYWORDS,
 			blockedHandles: [],
 			exceptions: [],
 			stats: { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 },
 			theme: 'dark'
-		}, (data) => {
+		}, async (data) => {
+			const DEFAULT_KEYWORDS = await getSharedDefaults();
+			// Migrate old default keywords to new defaults if unchanged by the user
+			if (arraysEqual(data.keywords, OLD_DEFAULT_KEYWORDS)) {
+				chrome.storage.local.set({ keywords: DEFAULT_KEYWORDS });
+				data.keywords = DEFAULT_KEYWORDS;
+			}
 			document.getElementById('keywords').value = (data.keywords || DEFAULT_KEYWORDS).join('\n');
 			document.getElementById('handles').value = (data.blockedHandles || []).join('\n');
 			document.getElementById('exceptions').value = (data.exceptions || []).join('\n');
@@ -54,6 +82,7 @@
 		chrome.storage.local.get({ autoBlockedHandles: [] }, (local) => {
 			const learned = new Set((local.autoBlockedHandles || []).map(normalizeHandle));
 			for (const ex of exceptions) { if (learned.has(ex)) learned.delete(ex); }
+			// If the user saved a list that matches shared defaults exactly, keep it as is; otherwise, store their custom list
 			chrome.storage.local.set({ keywords, blockedHandles: handles, exceptions, autoBlockedHandles: Array.from(learned) }, () => {
 			const btn = document.getElementById('save');
 			btn.textContent = 'Saved!';
