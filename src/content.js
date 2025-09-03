@@ -1,6 +1,6 @@
 (function() {
 	const DEFAULT_KEYWORDS = [
-		"crypto","bitcoin","ethereum","eth","btc","solana","sol","airdrop","nft","web3","altcoin","memecoin","shitcoin","token","ico","ido","seed","airdrops","uniswap","defi","dex","metamask","binance","coinbase","bybit","okx","bitfinex","blockchain"
+		"crypto","bitcoin","ethereum","eth","btc","solana","sol","airdrop","nft","web3","altcoin","memecoin","shitcoin","token","ico","ido","seed round","binance","coinbase","pump","moon","ponzi","staking","airdrops","uniswap","defi"
 	];
 
 	let keywordList = [];
@@ -17,6 +17,7 @@
 	const processedTweets = new WeakSet();
 	const processedUserCells = new WeakSet();
 	let stats = { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 };
+	const countedProfileHandles = new Set();
 
 	function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 	function rebuildKeywordRegex() {
@@ -35,24 +36,31 @@
 	function extractHandleFromHref(href) { try { if (!href) return ""; const clean = href.split('?')[0].split('#')[0]; const seg = clean.split('/').filter(Boolean)[0] || ''; if (!seg) return ""; if (["i","explore","settings","home","notifications"].includes(seg)) return ""; return '@' + seg; } catch (_) { return ""; } }
 	function extractHandleFromUrl() { try { return extractHandleFromHref(location.pathname); } catch (_) { return ""; } }
 	function schedulePersistAutoBlocklist() { if (persistTimer) clearTimeout(persistTimer); persistTimer = setTimeout(() => { try { chrome.storage.local.set({ autoBlockedHandles: Array.from(autoBlockedSet) }); } catch (_) {} }, 500); }
-	function incrementStat(statName) { stats[statName] = (stats[statName] || 0) + 1; chrome.storage.local.set({ stats }); }
-	function addToAutoBlocklist(handle) { const h = normalizeHandle(handle); if (!h) return; if (bundledSet.has(h)) return; if (!autoBlockedSet.has(h)) { autoBlockedSet.add(h); schedulePersistAutoBlocklist(); } }
+	function safeSetLocal(obj) { try { if (chrome && chrome.storage && chrome.storage.local) chrome.storage.local.set(obj); } catch (_) {} }
+	function incrementStat(statName) { stats[statName] = (stats[statName] || 0) + 1; safeSetLocal({ stats }); }
+	function addToAutoBlocklist(handle) { const h = normalizeHandle(handle); if (!h) return; if (bundledSet.has(h)) return; if (!autoBlockedSet.has(h)) { autoBlockedSet.add(h); schedulePersistAutoBlocklist(); if (!countedProfileHandles.has(h)) { countedProfileHandles.add(h); incrementStat('profilesBlocked'); } } }
 
 	function isExcepted(handle) { const h = normalizeHandle(handle); if (!h) return false; if (sessionAllowlist.has(h)) return true; return exceptions.includes(h); }
 
 	function addToExceptionsPersistent(handle) {
-		const h = normalizeHandle(handle);
-		if (!h) return;
-		if (exceptions.includes(h)) return;
-		exceptions = [...exceptions, h];
-		chrome.storage.local.set({ exceptions });
+		try {
+			const h = normalizeHandle(handle);
+			if (!h) return;
+			exceptions = Array.isArray(exceptions) ? exceptions : [];
+			if (exceptions.includes(h)) return;
+			exceptions = [...exceptions, h];
+			safeSetLocal({ exceptions });
+		} catch (_) { /* ignore when extension context is invalidated */ }
 	}
 
 	function removeFromExceptionsPersistent(handle) {
-		const h = normalizeHandle(handle);
-		if (!h) return;
-		exceptions = exceptions.filter(x => x !== h);
-		chrome.storage.local.set({ exceptions });
+		try {
+			const h = normalizeHandle(handle);
+			if (!h) return;
+			exceptions = Array.isArray(exceptions) ? exceptions : [];
+			exceptions = exceptions.filter(x => x !== h);
+			safeSetLocal({ exceptions });
+		} catch (_) { /* ignore when extension context is invalidated */ }
 	}
 
 	function normalizeTextForMatch(s) { try { return (s || "").normalize('NFKC'); } catch (_) { return s || ""; } }
@@ -108,8 +116,25 @@
 	function applyProfilePageBlocking() { try { const main = document.querySelector('main[role="main"]'); if (!main) return; let container = main.querySelector('div[data-testid="primaryColumn"]') || main; const { text, handle } = collectProfileText(); const handleNorm = normalizeHandle(handle || extractHandleFromUrl());
 		if (isPaused) { const cover = ensureProfileCover(container, handleNorm); if (cover) cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; hideFloatingReblock(container); return; }
 		if (handleNorm && sessionAllowlist.has(handleNorm)) { const cover = ensureProfileCover(container, handleNorm); if (cover) cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; injectFloatingReblock(container, handleNorm); return; }
+		// Fast path: if the handle alone warrants blocking, cover immediately to avoid scroll/jump
+		if (handleNorm && !isExcepted(handleNorm)) {
+			const handleTriggers = autoBlockedSet.has(handleNorm)
+				|| blockedHandles.includes(handleNorm)
+				|| (keywordRegex && (keywordRegex.test(handleNorm) || handleContainsKeyword(handleNorm)));
+			if (handleTriggers) {
+				const blockReason = getBlockReason('', handleNorm) || `Learned handle: ${handleNorm}`;
+				const cover = ensureProfileCover(container, handleNorm, blockReason);
+				const timelineRegion = container.querySelector('section[role="region"]');
+				if (timelineRegion) timelineRegion.style.display = 'none';
+				if (cover) cover.style.display = 'flex';
+				hideFloatingReblock(container);
+				container.style.minHeight = '100vh';
+				if (!countedProfileHandles.has(handleNorm)) { countedProfileHandles.add(handleNorm); incrementStat('profilesBlocked'); }
+				return;
+			}
+		}
 		const hide = shouldHideTextAndHandle(text, handleNorm, true);
-		if (hide) { const blockReason = getBlockReason(text, handleNorm); const cover = ensureProfileCover(container, handleNorm, blockReason); const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = 'none'; if (cover) cover.style.display = 'flex'; hideFloatingReblock(container); container.style.minHeight = '100vh'; } else { const cover = ensureProfileCover(container, handleNorm); if (cover) cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; hideFloatingReblock(container); }
+		if (hide) { const blockReason = getBlockReason(text, handleNorm); const cover = ensureProfileCover(container, handleNorm, blockReason); const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = 'none'; if (cover) cover.style.display = 'flex'; hideFloatingReblock(container); container.style.minHeight = '100vh'; if (handleNorm && !countedProfileHandles.has(handleNorm)) { countedProfileHandles.add(handleNorm); incrementStat('profilesBlocked'); } } else { const cover = ensureProfileCover(container, handleNorm); if (cover) cover.style.display = 'none'; const timelineRegion = container.querySelector('section[role="region"]'); if (timelineRegion) timelineRegion.style.display = ''; hideFloatingReblock(container); }
 	} catch (_) {} }
 
 	function isOnSearchPage() { return location.pathname.startsWith('/search'); }
