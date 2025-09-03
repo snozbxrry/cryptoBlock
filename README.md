@@ -2,6 +2,8 @@
 
 Note: This project is licensed for noncommercial use only. See `LICENSE`.
 
+**Current Version:** v0.2.1
+
 A powerful Chrome extension that automatically hides tweets, profiles, and content related to cryptocurrency, NFTs, and blockchain on X (formerly Twitter). cryptoBlock helps you maintain a cleaner timeline by filtering out crypto-related content while preserving your ability to see other posts.
 
 ## 🚀 Features
@@ -23,7 +25,7 @@ A powerful Chrome extension that automatically hides tweets, profiles, and conte
 ## 📦 Installation
 
 ### From Chrome Web Store
-1. Visit the [Chrome Web Store page](https://chrome.google.com/webstore/detail/cryptoblock-for-x-twitter/your-extension-id)
+1. Visit the [Chrome Web Store page](https://chrome.google.com/webstore/detail/cryptoblock)
 2. Click "Add to Chrome"
 3. Confirm the installation
 
@@ -233,7 +235,15 @@ This project is licensed under the PolyForm Noncommercial License 1.0.0. You may
 
 ## 🔄 Version History
 
-### v0.2.0 (Current)
+### v0.2.1 (Current)
+- Fixed "block again" button functionality
+- Unified keyword defaults across options and content scripts
+- Added shared defaults.json for consistent keyword management
+- Improved profile blocking statistics alignment
+- Better migration handling for existing users
+- Enhanced error handling and fallbacks
+
+### v0.2.0
 - Improved keyword matching with Unicode support
 - Enhanced handle detection for embedded crypto terms
 - Better search page filtering (all tabs)
