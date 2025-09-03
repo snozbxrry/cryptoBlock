@@ -25,11 +25,15 @@
 		chrome.storage.local.get({
 			keywords: DEFAULT_KEYWORDS,
 			blockedHandles: [],
-			exceptions: []
+			exceptions: [],
+			stats: { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 },
+			theme: 'dark'
 		}, (data) => {
 			document.getElementById('keywords').value = (data.keywords || DEFAULT_KEYWORDS).join('\n');
 			document.getElementById('handles').value = (data.blockedHandles || []).join('\n');
 			document.getElementById('exceptions').value = (data.exceptions || []).join('\n');
+			updateStats(data.stats || { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 });
+			setTheme(data.theme || 'dark');
 		});
 		refreshLearned();
 	}
@@ -133,6 +137,26 @@
 		});
 	}
 
+	function updateStats(stats) {
+		document.getElementById('tweetsHidden').textContent = stats.tweetsHidden || 0;
+		document.getElementById('profilesBlocked').textContent = stats.profilesBlocked || 0;
+		document.getElementById('keywordsMatched').textContent = stats.keywordsMatched || 0;
+	}
+
+	function resetStats() {
+		chrome.storage.local.set({ stats: { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 } }, () => {
+			updateStats({ tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 });
+		});
+	}
+
+	function setTheme(theme) {
+		document.body.className = theme === 'light' ? 'light-theme' : '';
+		document.querySelectorAll('.theme-btn').forEach(btn => {
+			btn.classList.toggle('active', btn.dataset.theme === theme);
+		});
+		chrome.storage.local.set({ theme });
+	}
+
 	function exportLearned() {
 		chrome.storage.local.get({ autoBlockedHandles: [] }, async (local) => {
 			const bundled = await getBundledSet();
@@ -187,6 +211,13 @@
 			e.target.value = '';
 		});
 		document.getElementById('clearLearned').addEventListener('click', clearLearned);
+		document.getElementById('resetStats').addEventListener('click', resetStats);
+		
+		// Theme toggle
+		document.querySelectorAll('.theme-btn').forEach(btn => {
+			btn.addEventListener('click', () => setTheme(btn.dataset.theme));
+		});
+		
 		// Optional: expose a full reset button via Shift+Reset defaults
 		document.getElementById('reset').addEventListener('click', (e) => {
 			if (e.shiftKey) {

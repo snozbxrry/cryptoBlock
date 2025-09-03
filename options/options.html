@@ -7,10 +7,16 @@
 		<link rel="stylesheet" href="options.css" />
 	</head>
 	<body>
+		<div class="theme-toggle">
+			<button class="theme-btn active" data-theme="dark">🌙</button>
+			<button class="theme-btn" data-theme="light">☀️</button>
+		</div>
 		<div class="container">
 			<div class="toolbar">
-				<h1 class="title">cryptoBlock Options</h1>
-				<div class="actions">
+				<h1 class="title" style="display:flex; align-items:center; gap:0.5em;">
+					<img src="../icons/cb.png" alt="Options" style="height:1.8em;">
+					<span>Options</span>
+				  </h1>				<div class="actions">
 					<button id="exportAll">Export all</button>
 					<label class="import-label">
 						<input id="importAllFile" type="file" accept="application/json" />
@@ -57,6 +63,27 @@
 					<label for="exceptions">Always allow these @handles (one per line)</label>
 					<textarea id="exceptions" rows="10" placeholder="e.g. @elonmusk"></textarea>
 					<p class="hint">Profiles and posts from these handles will never be hidden.</p>
+				</section>
+			</div>
+
+			<div class="stats-section">
+				<section class="card stats-card">
+					<h2>Statistics Dashboard</h2>
+					<div class="stats-grid">
+						<div class="stat-item">
+							<div class="stat-number" id="tweetsHidden">0</div>
+							<div class="stat-label">Tweets Hidden</div>
+						</div>
+						<div class="stat-item">
+							<div class="stat-number" id="profilesBlocked">0</div>
+							<div class="stat-label">Profiles Blocked</div>
+						</div>
+						<div class="stat-item">
+							<div class="stat-number" id="keywordsMatched">0</div>
+							<div class="stat-label">Keywords Matched</div>
+						</div>
+					</div>
+					<button id="resetStats" class="reset-stats-btn">Reset Stats</button>
 				</section>
 			</div>
 

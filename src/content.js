@@ -16,6 +16,7 @@
 	const SCAN_THROTTLE_MS = 1000; 
 	const processedTweets = new WeakSet();
 	const processedUserCells = new WeakSet();
+	let stats = { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 };
 
 	function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 	function rebuildKeywordRegex() {
@@ -34,6 +35,7 @@
 	function extractHandleFromHref(href) { try { if (!href) return ""; const clean = href.split('?')[0].split('#')[0]; const seg = clean.split('/').filter(Boolean)[0] || ''; if (!seg) return ""; if (["i","explore","settings","home","notifications"].includes(seg)) return ""; return '@' + seg; } catch (_) { return ""; } }
 	function extractHandleFromUrl() { try { return extractHandleFromHref(location.pathname); } catch (_) { return ""; } }
 	function schedulePersistAutoBlocklist() { if (persistTimer) clearTimeout(persistTimer); persistTimer = setTimeout(() => { try { chrome.storage.local.set({ autoBlockedHandles: Array.from(autoBlockedSet) }); } catch (_) {} }, 500); }
+	function incrementStat(statName) { stats[statName] = (stats[statName] || 0) + 1; chrome.storage.local.set({ stats }); }
 	function addToAutoBlocklist(handle) { const h = normalizeHandle(handle); if (!h) return; if (bundledSet.has(h)) return; if (!autoBlockedSet.has(h)) { autoBlockedSet.add(h); schedulePersistAutoBlocklist(); } }
 
 	function isExcepted(handle) { const h = normalizeHandle(handle); if (!h) return false; if (sessionAllowlist.has(h)) return true; return exceptions.includes(h); }
@@ -73,6 +75,7 @@
 		if (!keywordRegex) return false;
 		const matched = keywordRegex.test(text) || (handleNorm && (keywordRegex.test(handleNorm) || handleContainsKeyword(handleNorm)));
 		if (matched && learn && handleNorm) addToAutoBlocklist(handleNorm);
+		if (matched) incrementStat('keywordsMatched');
 		return matched;
 	}
 	function getBlockReason(textContent, authorHandle) {
@@ -95,7 +98,7 @@
 	function findAuthorHandle(tweetEl) { const withAt = tweetEl.querySelector('a[role="link"] span'); if (withAt && withAt.textContent && withAt.textContent.includes('@')) return withAt.textContent.trim(); let profileLink = tweetEl.querySelector('[data-testid="User-Name"] a[href^="/" i]'); if (!profileLink) profileLink = tweetEl.querySelector('a[role="link"][href^="/" i]'); if (profileLink) { const candidate = extractHandleFromHref(profileLink.getAttribute('href')); if (candidate) return candidate; } const possible = tweetEl.querySelectorAll('span'); for (const span of possible) { const t = span.textContent || ""; if (t.startsWith('@') && t.length > 1 && !t.includes(' ')) return t.trim(); } return ""; }
 	function extractTweetText(tweetEl) { let chunks = []; for (const n of tweetEl.querySelectorAll('[data-testid="tweetText"]')) if (n && n.textContent) chunks.push(n.textContent); for (const n of tweetEl.querySelectorAll('div[lang], div[dir]')) if (n && n.textContent) chunks.push(n.textContent); for (const n of tweetEl.querySelectorAll('article [data-testid="tweetText"], article div[lang]')) if (n && n.textContent) chunks.push(n.textContent); if (chunks.length === 0 && tweetEl.textContent) chunks.push(tweetEl.textContent); return chunks.join(' ').replace(/\s+/g,' ').trim(); }
 	function hideElement(el) { const cell = el.closest('[data-testid="cellInnerDiv"]') || el.closest('[data-testid="UserCell"]') || el; cell.style.display = 'none'; }
-	function processTweet(tweetEl) { try { if (isPaused) return; if (processedTweets.has(tweetEl)) return; processedTweets.add(tweetEl); const text = extractTweetText(tweetEl); const handle = findAuthorHandle(tweetEl); if (shouldHideTextAndHandle(text, handle, true)) hideElement(tweetEl); } catch (_) {} }
+	function processTweet(tweetEl) { try { if (isPaused) return; if (processedTweets.has(tweetEl)) return; processedTweets.add(tweetEl); const text = extractTweetText(tweetEl); const handle = findAuthorHandle(tweetEl); if (shouldHideTextAndHandle(text, handle, true)) { hideElement(tweetEl); incrementStat('tweetsHidden'); } } catch (_) {} }
 	function scanExistingTweets() { if (isPaused) return; const now = Date.now(); if (now - lastScanTime < SCAN_THROTTLE_MS) return; lastScanTime = now; const tweets = document.querySelectorAll('article[role="article"]'); for (const t of tweets) processTweet(t); }
 
 	function collectProfileText() { const nameEl = document.querySelector('div[data-testid="UserName"] span'); const bioEl = document.querySelector('div[data-testid="UserDescription"]'); const handleEl = document.querySelector('div[data-testid="UserName"] a[href^="/" i] span'); const name = nameEl ? nameEl.textContent || '' : ''; const bio = bioEl ? bioEl.textContent || '' : ''; let handle = handleEl ? handleEl.textContent || '' : ''; if (!handle) handle = extractHandleFromUrl(); return { text: (name + ' ' + bio).trim(), handle }; }
@@ -147,7 +150,7 @@
 	}
 
 	function extractUserCellInfo(userCell) { let handle = ''; let text = ''; const userNameGroup = userCell.querySelector('[data-testid="User-Name"]'); if (userNameGroup) { const spans = userNameGroup.querySelectorAll('span'); for (const s of spans) { const t = (s.textContent || '').trim(); if (t.startsWith('@') && t.length > 1 && !t.includes(' ')) { handle = t; break; } } } if (!handle) { const profileLink = userCell.querySelector('a[href^="/" i][role="link"]'); if (profileLink) handle = extractHandleFromHref(profileLink.getAttribute('href')); } const bio = userCell.querySelector('[data-testid="UserDescription"], div[dir]'); const nameNode = userCell.querySelector('[data-testid="User-Name"]'); text = [nameNode ? nameNode.textContent : '', bio ? bio.textContent : ''].join(' ').trim(); if (!text) text = (userCell.textContent || '').trim(); return { handle, text }; }
-	function processUserCell(el) { try { if (isPaused) return; if (processedUserCells.has(el)) return; processedUserCells.add(el); const info = extractUserCellInfo(el); if (shouldHideTextAndHandle(info.text, info.handle, true)) hideElement(el); } catch (_) {} }
+	function processUserCell(el) { try { if (isPaused) return; if (processedUserCells.has(el)) return; processedUserCells.add(el); const info = extractUserCellInfo(el); if (shouldHideTextAndHandle(info.text, info.handle, true)) { hideElement(el); incrementStat('profilesBlocked'); } } catch (_) {} }
 	function scanExistingUserCells() { const cells = document.querySelectorAll('[data-testid="UserCell"], [data-testid="TypeaheadUser"], [data-testid="UserCell-Enhanced"], [data-testid="cellInnerDiv"]'); for (const c of cells) processUserCell(c); }
 
 	async function mergeBundledBlocklist() {
@@ -166,13 +169,14 @@
 	}
 
 	function loadSettingsAndStart() {
-		chrome.storage.local.get({ autoBlockedHandles: [], keywords: DEFAULT_KEYWORDS, blockedHandles: [], exceptions: [], paused: false }, async (local) => {
+		chrome.storage.local.get({ autoBlockedHandles: [], keywords: DEFAULT_KEYWORDS, blockedHandles: [], exceptions: [], paused: false, stats: { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 } }, async (local) => {
 			autoBlockedSet = new Set((local.autoBlockedHandles || []).map(normalizeHandle));
 			isPaused = Boolean(local.paused);
 			await mergeBundledBlocklist();
 			keywordList = Array.isArray(local.keywords) ? local.keywords : DEFAULT_KEYWORDS;
 			blockedHandles = (Array.isArray(local.blockedHandles) ? local.blockedHandles : []).map(normalizeHandle);
 			exceptions = (Array.isArray(local.exceptions) ? local.exceptions : []).map(normalizeHandle);
+			stats = local.stats || { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 };
 			rebuildKeywordRegex();
 			scanExistingTweets();
 			scanExistingUserCells();
