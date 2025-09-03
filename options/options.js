@@ -75,6 +75,9 @@
 			const bundled = await getBundledSet();
 			const learned = (local.autoBlockedHandles || []).map(normalizeHandle).filter(Boolean).filter(h => !bundled.has(h)).sort();
 			document.getElementById('learnedCount').textContent = learned.length.toString();
+			// Keep Profiles Blocked stat aligned with learned handles count
+			const profilesBlockedEl = document.getElementById('profilesBlocked');
+			if (profilesBlockedEl) profilesBlockedEl.textContent = learned.length.toString();
 			const ul = document.getElementById('learnedList');
 			ul.innerHTML = '';
 			for (const h of learned) {
