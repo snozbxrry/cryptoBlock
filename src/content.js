@@ -37,8 +37,7 @@
 	const SCAN_THROTTLE_MS = 1000; 
 	const processedTweets = new WeakSet();
 	const processedUserCells = new WeakSet();
-	let stats = { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 };
-	const countedProfileHandles = new Set();
+	let stats = { tweetsHidden: 0, keywordsMatched: 0 };
 
 	function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 	function rebuildKeywordRegex() {
@@ -193,7 +192,6 @@
 	} catch (_) {} }
 
 	function isOnSearchPage() { return location.pathname.startsWith('/search'); }
-	function isOnPeopleSearchPage() { if (!isOnSearchPage()) return false; try { const params = new URLSearchParams(location.search); const f = (params.get('f') || '').toLowerCase(); return f === 'user' || f === 'users' || f === 'people'; } catch (_) { return false; } }
 	function scanSearchPeopleCells() { if (isPaused) return; const now = Date.now(); if (now - lastScanTime < SCAN_THROTTLE_MS) return; lastScanTime = now; const timeline = document.querySelector('[aria-label^="Timeline:"]'); const cells = (timeline || document).querySelectorAll('[data-testid="UserCell"], [data-testid="cellInnerDiv"]'); for (const cell of cells) processUserCell(cell); }
 	function scanSearchTweets() { if (isPaused) return; const now = Date.now(); if (now - lastScanTime < SCAN_THROTTLE_MS) return; lastScanTime = now; const timeline = document.querySelector('[aria-label^="Timeline:"]'); const arts = (timeline || document).querySelectorAll('[data-testid="cellInnerDiv"] article, article[role="article"]'); for (const a of arts) processTweet(a); }
 

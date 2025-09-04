@@ -3,6 +3,9 @@
 		"crypto","bitcoin","ethereum","eth","btc","solana","sol","airdrop","nft","web3","altcoin","memecoin","shitcoin","token","seed round","binance","coinbase","pumpfun","staking","airdrops","uniswap","defi"
 	];
 
+	// Shared defaults available to all functions in this module
+	let DEFAULT_KEYWORDS = INLINE_DEFAULT_KEYWORDS;
+
 	async function getSharedDefaults() {
 		try {
 			const url = chrome.runtime.getURL('src/defaults.json');
@@ -51,7 +54,7 @@
 			stats: { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 },
 			theme: 'dark'
 		}, async (data) => {
-			const DEFAULT_KEYWORDS = await getSharedDefaults();
+			DEFAULT_KEYWORDS = await getSharedDefaults();
 			// Migrate old default keywords to new defaults if unchanged by the user
 			if (arraysEqual(data.keywords, OLD_DEFAULT_KEYWORDS)) {
 				chrome.storage.local.set({ keywords: DEFAULT_KEYWORDS });
