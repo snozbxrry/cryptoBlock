@@ -59,7 +59,7 @@
 	function schedulePersistAutoBlocklist() { if (persistTimer) clearTimeout(persistTimer); persistTimer = setTimeout(() => { try { chrome.storage.local.set({ autoBlockedHandles: Array.from(autoBlockedSet) }); } catch (_) {} }, 500); }
 	function safeSetLocal(obj) { try { if (chrome && chrome.storage && chrome.storage.local) chrome.storage.local.set(obj); } catch (_) {} }
 	function incrementStat(statName) { stats[statName] = (stats[statName] || 0) + 1; safeSetLocal({ stats }); }
-	function addToAutoBlocklist(handle) { const h = normalizeHandle(handle); if (!h) return; if (bundledSet.has(h)) return; if (!autoBlockedSet.has(h)) { autoBlockedSet.add(h); schedulePersistAutoBlocklist(); if (!countedProfileHandles.has(h)) { countedProfileHandles.add(h); incrementStat('profilesBlocked'); } } }
+	function addToAutoBlocklist(handle) { const h = normalizeHandle(handle); if (!h) return; if (bundledSet.has(h)) return; if (!autoBlockedSet.has(h)) { autoBlockedSet.add(h); schedulePersistAutoBlocklist(); } }
 
 	function isExcepted(handle) { const h = normalizeHandle(handle); if (!h) return false; if (sessionAllowlist.has(h)) return true; return exceptions.includes(h); }
 

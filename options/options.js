@@ -171,13 +171,12 @@
 
 	function updateStats(stats) {
 		document.getElementById('tweetsHidden').textContent = stats.tweetsHidden || 0;
-		document.getElementById('profilesBlocked').textContent = stats.profilesBlocked || 0;
 		document.getElementById('keywordsMatched').textContent = stats.keywordsMatched || 0;
 	}
 
 	function resetStats() {
-		chrome.storage.local.set({ stats: { tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 } }, () => {
-			updateStats({ tweetsHidden: 0, profilesBlocked: 0, keywordsMatched: 0 });
+		chrome.storage.local.set({ stats: { tweetsHidden: 0, keywordsMatched: 0 } }, () => {
+			updateStats({ tweetsHidden: 0, keywordsMatched: 0 });
 		});
 	}
 
