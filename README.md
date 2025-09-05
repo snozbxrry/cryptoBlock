@@ -25,7 +25,7 @@ A powerful Chrome extension that automatically hides tweets, profiles, and conte
 ## 📦 Installation
 
 ### From Chrome Web Store
-1. Visit the [Chrome Web Store page](https://chrome.google.com/webstore/detail/cryptoblock)
+1. Visit the [Chrome Web Store page](https://chromewebstore.google.com/detail/cryptoblock-for-x-twitter/jncldnaiolbmembbpmfdeoagcdjjnjeb)
 2. Click "Add to Chrome"
 3. Confirm the installation
 
