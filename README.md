@@ -1,12 +1,10 @@
 # cryptoBlock for X (Twitter)
 
-Note: This project is licensed for noncommercial use only. See `LICENSE`.
-
 **Current Version:** v0.2.1
 
 A powerful Chrome extension that automatically hides tweets, profiles, and content related to cryptocurrency, NFTs, and blockchain on X (formerly Twitter). cryptoBlock helps you maintain a cleaner timeline by filtering out crypto-related content while preserving your ability to see other posts.
 
-## 🚀 Features
+## Features
 
 ### Core Functionality
 - **Automatic Content Filtering**: Hides tweets containing crypto-related keywords
@@ -22,7 +20,7 @@ A powerful Chrome extension that automatically hides tweets, profiles, and conte
 - **JSON Import/Export**: Backup and restore keywords, manual, exceptions, and learned lists
 - **Real-time Updates**: Immediate filtering as new content loads
 
-## 📦 Installation
+## Installation
 
 ### From Chrome Web Store
 1. Visit the [Chrome Web Store page](https://chromewebstore.google.com/detail/cryptoblock-for-x-twitter/jncldnaiolbmembbpmfdeoagcdjjnjeb)
@@ -42,7 +40,7 @@ A powerful Chrome extension that automatically hides tweets, profiles, and conte
 4. Click "Load unpacked" and select the extension folder
 5. The cryptoBlock icon should appear in your toolbar
 
-## 🎯 How It Works
+## How It Works
 
 ### Keyword-Based Filtering
 cryptoBlock uses a comprehensive list of crypto-related keywords to identify content:
@@ -64,7 +62,7 @@ cryptoBlock analyzes:
 - **Search Results**: Both tweet and user search results
 - **Timeline Content**: Home feed, profile timelines, and trending topics
 
-## 🛠️ Usage
+## Usage
 
 ### Basic Usage
 1. **Install and Enable**: The extension works automatically after installation
@@ -85,29 +83,7 @@ Access the options page for:
 - **Exception List**: Allow specific handles to bypass filtering
 - **Data Management**: Import/export your blocklists
 
-## 📁 File Structure
-
-```
-cryptblock/
-├── manifest.json              # Extension configuration
-├── icons/
-│   └── cB.png                 # Extension icon
-├── popup/
-│   ├── popup.html             # Popup interface
-│   ├── popup.css              # Popup styling
-│   └── popup.js               # Popup functionality
-├── options/
-│   ├── options.html           # Options page
-│   ├── options.css            # Options styling
-│   └── options.js             # Options functionality
-├── src/
-│   └── content.js             # Main content script
-├── blocklist/
-│   └── blocklist.json         # Bundled blocklist
-└── README.md                  # This file
-```
-
-## 🔧 Configuration
+## Configuration
 
 ### JSON Import/Export
 You can backup and restore your configuration (Options toolbar → Export all / Import all). Learned handles exclude bundled blocklist entries to avoid duplicates.
@@ -140,7 +116,7 @@ Allow specific handles to bypass filtering:
 2. **Permanent**: Add to exceptions list in options
 3. **Session-based**: Automatically expires when you close the tab
 
-## 🎨 Customization
+## Customization
 
 ### Styling
 The extension uses minimal styling that doesn't interfere with X's interface:
@@ -153,7 +129,7 @@ The extension uses minimal styling that doesn't interfere with X's interface:
 - **Minimal DOM Impact**: MutationObserver with de-duplication to avoid reprocessing
 - **Memory Management**: Automatic cleanup and throttled scans
 
-## 🔒 Privacy & Security
+## Privacy & Security
 
 ### Data Storage
 - **Local Storage Only**: All data stays on your device
@@ -165,7 +141,7 @@ The extension uses minimal styling that doesn't interfere with X's interface:
 - **Host Permissions**: Access X/Twitter to filter content
 - **No Personal Data**: Extension doesn't access your personal information
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -191,17 +167,6 @@ If you encounter issues:
 3. Confirm the reset
 4. Restart the extension
 
-## 🤝 Contributing
-
-We welcome contributions! Here's how you can help:
-
-### Development Setup
-1. Clone the repository
-2. Load the extension in Chrome developer mode
-3. Make your changes
-4. Test thoroughly on X/Twitter
-5. Submit a pull request
-
 ### Areas for Contribution
 - **Keyword Lists**: Add more crypto-related terms
 - **UI Improvements**: Enhance the popup or options interface
@@ -217,23 +182,23 @@ When reporting bugs, please include:
 - Expected vs actual behavior
 - Screenshots if applicable
 
-## 📄 License
+## License
 
 This project is licensed under the PolyForm Noncommercial License 1.0.0. You may use it for personal or internal, noncommercial purposes only. See the [LICENSE](LICENSE) file for full terms.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **X/Twitter**: For providing the platform
 - **Chrome Extensions API**: For enabling content filtering
 - **Open Source Community**: For inspiration and feedback
 
-## 📞 Support
+## Support
 
 - **GitHub Issues**: Report bugs and request features
 - **Twitter/X**: Contact [@snozbxrry](https://x.com/snozbxrry) for support
 - **Chrome Web Store**: Leave reviews and ratings
 
-## 🔄 Version History
+## Version History
 
 ### v0.2.1 (Current)
 - Fixed "block again" button functionality
@@ -267,5 +232,9 @@ This project is licensed under the PolyForm Noncommercial License 1.0.0. You may
 ---
 
 **Made with ❤️ for a cleaner X/Twitter experience**
+
+---
+
+**Note:** The GitHub version is updated more frequently than the Chrome Web Store version. The Chrome Web Store only receives updates in larger incremental releases, while the GitHub repository contains the latest features, bug fixes, and improvements.
 
 *cryptoBlock is not affiliated with X Corp. or Twitter, Inc.*

@@ -1,6 +1,6 @@
 # Privacy Policy for CryptoBlock Extension
 
-**Last updated:** September 3, 2025
+**Last updated:** September 6, 2025
 
 ## Overview
 CryptoBlock is a browser extension that hides crypto-related content (tweets, profiles, and search results) on X (formerly Twitter). This privacy policy explains how we handle your data.
@@ -16,11 +16,11 @@ CryptoBlock is a browser extension that hides crypto-related content (tweets, pr
 - **No external servers** - all processing happens locally in your browser
 
 ## What We Don't Do
-- ❌ Collect personal information
-- ❌ Track your browsing history
-- ❌ Send data to external servers
-- ❌ Use cookies or tracking technologies
-- ❌ Share data with third parties
+- Collect personal information
+- Track your browsing history
+- Send data to external servers
+- Use cookies or tracking technologies
+- Share data with third parties
 
 ## Technical Details
 - The extension operates entirely **client-side**
