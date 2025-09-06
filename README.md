@@ -2,23 +2,17 @@
 
 **Current Version:** v0.2.1
 
-A powerful Chrome extension that automatically hides tweets, profiles, and content related to cryptocurrency, NFTs, and blockchain on X (formerly Twitter). cryptoBlock helps you maintain a cleaner timeline by filtering out crypto-related content while preserving your ability to see other posts.
+A Chrome extension that hides tweets, profiles, and content related to cryptocurrency, NFTs, and blockchain on X (formerly Twitter).
 
 ## Features
 
-### Core Functionality
 - **Automatic Content Filtering**: Hides tweets containing crypto-related keywords
 - **Profile Blocking**: Blocks entire profiles that post crypto content
 - **Smart Learning**: Automatically learns and blocks handles that frequently post crypto content
-- **Search Page Filtering**: Filters crypto content from search results and user searches
-- **Global Pause/Resume**: Temporarily disable filtering without losing learned data
-
-### Advanced Features
+- **Search Page Filtering**: Filters crypto content from search results
+- **Global Pause/Resume**: Temporarily disable filtering
 - **Exception Management**: Allow specific handles to bypass filtering
-- **Session Allowlist**: Temporarily show blocked profiles during your session
-- **Bundled Blocklist**: Pre-configured list of known crypto accounts
-- **JSON Import/Export**: Backup and restore keywords, manual, exceptions, and learned lists
-- **Real-time Updates**: Immediate filtering as new content loads
+- **JSON Import/Export**: Backup and restore settings
 
 ## Installation
 
@@ -29,9 +23,8 @@ A powerful Chrome extension that automatically hides tweets, profiles, and conte
 
 ### Privacy & Security
 - **Privacy Policy**: [View our privacy policy](https://raw.githubusercontent.com/snozbxrry/cryptoBlock/main/PRIVACY_POLICY.md)
-- **No Data Collection**: We don't collect, store, or transmit any personal information
-- **Client-Side Only**: All processing happens locally in your browser
-- **Open Source**: Full source code available for transparency
+- **No Data Collection**: All processing happens locally in your browser
+- **Open Source**: Full source code available
 
 ### Manual Installation (Developer Mode)
 1. Download or clone this repository
@@ -40,53 +33,21 @@ A powerful Chrome extension that automatically hides tweets, profiles, and conte
 4. Click "Load unpacked" and select the extension folder
 5. The cryptoBlock icon should appear in your toolbar
 
-## How It Works
-
-### Keyword-Based Filtering
-cryptoBlock uses a comprehensive list of crypto-related keywords to identify content:
-- **Cryptocurrencies**: bitcoin, ethereum, solana, etc.
-- **Platforms**: binance, coinbase, metamask, etc.
-- **Concepts**: nft, web3, defi, airdrop, etc.
-- **Trading Terms**: ico, ido, seed, token, etc.
-
-### Smart Profile Learning
-The extension learns from your interactions:
-1. When a tweet matches crypto keywords, the author's handle is noted
-2. After multiple matches, the handle is automatically added to the blocklist
-3. This creates a personalized filter that improves over time
-
-### Content Detection
-cryptoBlock analyzes:
-- **Tweet Text**: Main content and replies
-- **Profile Information**: Bio, display name, and handle
-- **Search Results**: Both tweet and user search results
-- **Timeline Content**: Home feed, profile timelines, and trending topics
-
 ## Usage
 
-### Basic Usage
-1. **Install and Enable**: The extension works automatically after installation
-2. **Browse Normally**: Visit X/Twitter as usual - crypto content will be hidden
-3. **View Status**: Click the extension icon to see current status and learned handles
+1. Install and enable the extension
+2. Visit X/Twitter as usual - crypto content will be hidden
+3. Click the extension icon to see status and learned handles
 
-### Popup Interface
-The extension popup provides:
-- **Status Display**: Shows if filtering is active or paused
-- **Pause/Resume**: Temporarily disable filtering globally
-- **Handle Counter**: Shows how many handles have been learned
-- **Options Access**: Quick link to advanced settings
-
-### Advanced Configuration
+### Configuration
 Access the options page for:
-- **Custom Keywords**: Add or remove filtering keywords
-- **Manual Blocklist**: Manually add handles to block
-- **Exception List**: Allow specific handles to bypass filtering
-- **Data Management**: Import/export your blocklists
-
-## Configuration
+- Custom keywords
+- Manual blocklist
+- Exception list
+- Data management
 
 ### JSON Import/Export
-You can backup and restore your configuration (Options toolbar → Export all / Import all). Learned handles exclude bundled blocklist entries to avoid duplicates.
+Backup and restore your configuration (Options → Export all / Import all).
 
 **Export Format:**
 ```json
@@ -98,105 +59,42 @@ You can backup and restore your configuration (Options toolbar → Export all / 
 }
 ```
 
-**Import Process:**
-1. Go to Options → toolbar → Import all
-2. Select your backup file (cryptoBlock-settings.json)
-3. Confirm the import
-
 ### Custom Keywords
-Add your own filtering terms:
-1. Open Options → Keywords
-2. Add new keywords (one per line)
-3. Save changes
-4. Keywords are case-insensitive and support partial matches
+Add your own filtering terms in Options → Keywords. Keywords are case-insensitive and support partial matches.
 
 ### Exception Management
 Allow specific handles to bypass filtering:
-1. **Temporary**: Click "Show profile" on a blocked profile
-2. **Permanent**: Add to exceptions list in options
-3. **Session-based**: Automatically expires when you close the tab
-
-## Customization
-
-### Styling
-The extension uses minimal styling that doesn't interfere with X's interface:
-- **Hidden Content**: Completely removed from DOM
-- **Profile Covers**: Black overlay with white text
-- **Buttons**: Styled to match X's design language
-
-### Performance
-- **Efficient Filtering**: Cached regex with support for hashtags/cashtags and Unicode
-- **Minimal DOM Impact**: MutationObserver with de-duplication to avoid reprocessing
-- **Memory Management**: Automatic cleanup and throttled scans
+- **Temporary**: Click "Show profile" on a blocked profile
+- **Permanent**: Add to exceptions list in options
 
 ## Privacy & Security
 
-### Data Storage
 - **Local Storage Only**: All data stays on your device
 - **No External Requests**: Extension doesn't send data to external servers
 - **Minimal Permissions**: Only requests access to X/Twitter domains
 
-### Permissions Explained
-- **Storage**: Save your preferences and learned handles
-- **Host Permissions**: Access X/Twitter to filter content
-- **No Personal Data**: Extension doesn't access your personal information
-
 ## Troubleshooting
-
-### Common Issues
 
 **Extension Not Working:**
 1. Check if it's enabled in `chrome://extensions/`
 2. Refresh the X/Twitter page
-3. Check if the extension has permission to access the site
 
 **Content Still Showing:**
 1. Verify the extension is not paused
 2. Check if the content matches your keyword list
-3. Try adding more specific keywords
 
-**Performance Issues:**
-1. Clear old learned handles in options
-2. Reduce the number of custom keywords
-3. Restart the browser
-
-### Reset Extension
-If you encounter issues:
+**Reset Extension:**
 1. Go to Options → Data Management
 2. Click "Reset All Data"
-3. Confirm the reset
-4. Restart the extension
-
-### Areas for Contribution
-- **Keyword Lists**: Add more crypto-related terms
-- **UI Improvements**: Enhance the popup or options interface
-- **Performance**: Optimize filtering algorithms
-- **Bug Fixes**: Report and fix issues
-- **Documentation**: Improve this README
-
-### Reporting Issues
-When reporting bugs, please include:
-- Chrome version
-- Extension version
-- Steps to reproduce
-- Expected vs actual behavior
-- Screenshots if applicable
 
 ## License
 
 This project is licensed under the PolyForm Noncommercial License 1.0.0. You may use it for personal or internal, noncommercial purposes only. See the [LICENSE](LICENSE) file for full terms.
 
-## Acknowledgments
-
-- **X/Twitter**: For providing the platform
-- **Chrome Extensions API**: For enabling content filtering
-- **Open Source Community**: For inspiration and feedback
-
 ## Support
 
 - **GitHub Issues**: Report bugs and request features
 - **Twitter/X**: Contact [@snozbxrry](https://x.com/snozbxrry) for support
-- **Chrome Web Store**: Leave reviews and ratings
 
 ## Version History
 
@@ -224,17 +122,8 @@ This project is licensed under the PolyForm Noncommercial License 1.0.0. You may
 - JSON import/export
 - Global pause/resume
 
-### Planned Features
-- **v0.3.0**: Multiple profile support
-- **v0.4.0**: Custom CSS themes
-- **v0.5.0**: Analytics dashboard
-
 ---
 
-**Made with ❤️ for a cleaner X/Twitter experience**
-
----
-
-**Note:** The GitHub version is updated more frequently than the Chrome Web Store version. The Chrome Web Store only receives updates in larger incremental releases, while the GitHub repository contains the latest features, bug fixes, and improvements.
+**Note:** The GitHub version is updated more frequently than the Chrome Web Store version.
 
 *cryptoBlock is not affiliated with X Corp. or Twitter, Inc.*
